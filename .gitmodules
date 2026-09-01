@@ -1,0 +1,3 @@
+[submodule "Assets/PlaySchoolAPI"]
+	path = Assets/PlaySchoolAPI
+	url = https://github.com/TopG-Neela-mediatech/PlaySchoolAPI_main
