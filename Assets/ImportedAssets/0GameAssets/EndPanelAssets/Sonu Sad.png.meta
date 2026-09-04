@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 953a342e2f40efe4883e1343794f08fb
+guid: 7e5da8a1757d5cc488feb3f14a615666
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5601767544888516966
-    second: HomeButton_0
+      213: -4772732887787070724
+    second: Sonu Sad_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: HomeButton_0
+      name: Sonu Sad_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 68
         y: 0
-        width: 512
-        height: 512
+        width: 888
+        height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a9e9b9ce8168242b0800000000000000
-      internalID: -5601767544888516966
+      spriteID: cfa90afb9b8d3cdb0800000000000000
+      internalID: -4772732887787070724
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      HomeButton_0: -5601767544888516966
+      Sonu Sad_0: -4772732887787070724
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

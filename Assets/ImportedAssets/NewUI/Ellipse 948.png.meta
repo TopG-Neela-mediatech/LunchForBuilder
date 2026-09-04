@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 953a342e2f40efe4883e1343794f08fb
+guid: 98472a2eec0a8454d91126073696a9cf
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5601767544888516966
-    second: HomeButton_0
+      213: 8330803817745721717
+    second: Ellipse 948_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 2048
+    maxTextureSize: 1024
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -109,24 +109,11 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
-  - serializedVersion: 4
-    buildTarget: iOS
-    maxTextureSize: 2048
-    resizeAlgorithm: 0
-    textureFormat: -1
-    textureCompression: 1
-    compressionQuality: 50
-    crunchedCompression: 0
-    allowsAlphaSplitting: 0
-    overridden: 0
-    ignorePlatformSupport: 0
-    androidETC2FallbackOverride: 0
-    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: HomeButton_0
+      name: Ellipse 948_0
       rect:
         serializedVersion: 2
         x: 0
@@ -141,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a9e9b9ce8168242b0800000000000000
-      internalID: -5601767544888516966
+      spriteID: 579a33a0fe5fc9370800000000000000
+      internalID: 8330803817745721717
       vertices: []
       indices: 
       edges: []
@@ -161,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      HomeButton_0: -5601767544888516966
+      Ellipse 948_0: 8330803817745721717
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
