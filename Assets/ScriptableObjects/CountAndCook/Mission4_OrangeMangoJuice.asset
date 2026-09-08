@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ac521d7c376ee54a9973b12a6cd1ce3, type: 3}
+  m_Name: Mission4_OrangeMangoJuice
+  m_EditorClassIdentifier: 
+  dishName: Orange Mango Juice
+  learningRule: 3
+  requirements:
+  - ingredientId: OrangeSlice
+    icon: {fileID: 21300000, guid: de8ccbdc618d75946b8a5af55ffa1f7b, type: 3}
+    requiredCount: 8
+    isRemoval: 0
+    sequenceOrder: -1
+  - ingredientId: MangoChunk
+    icon: {fileID: 21300000, guid: 2b4a11ea0d2184e4e9627f89c218b958, type: 3}
+    requiredCount: 5
+    isRemoval: 0
+    sequenceOrder: -1
+  - ingredientId: IceCube
+    icon: {fileID: 21300000, guid: 8006c3499981c3f44a4ff263a65c1207, type: 3}
+    requiredCount: 2
+    isRemoval: 1
+    sequenceOrder: -1
+  startingIngredients:
+  - ingredientId: IceCube
+    icon: {fileID: 21300000, guid: 8006c3499981c3f44a4ff263a65c1207, type: 3}
+    requiredCount: 6
+    isRemoval: 0
+    sequenceOrder: -1
+  memoryRevealSeconds: 0
+  peekRevealSeconds: 0

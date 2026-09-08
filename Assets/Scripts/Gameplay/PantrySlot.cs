@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace tmkoc.lunchforbuilders
 {
@@ -13,6 +14,8 @@ namespace tmkoc.lunchforbuilders
     {
         [SerializeField] private string ingredientId;
         [SerializeField] private IngredientController tokenPrefab;
+        [Tooltip("This slot's own icon -- already set to the ingredient's sprite. Read at spawn time and copied onto every token this slot creates, so one shared token prefab can render every ingredient.")]
+        [SerializeField] private Image icon;
         [SerializeField] private RectTransform rectTransform;
         [Tooltip("Dimmed/non-interactable while this ingredient isn't valid for the current sequence step (Mission 3 only). Untouched otherwise.")]
         [SerializeField] private CanvasGroup canvasGroup;
@@ -42,7 +45,7 @@ namespace tmkoc.lunchforbuilders
         {
             if (tokenPrefab == null) return null;
             var token = Instantiate(tokenPrefab, dragLayerRoot);
-            token.InitAsPlacedToken(owningManager, ingredientId, dragLayerRoot);
+            token.InitAsPlacedToken(owningManager, ingredientId, IconSprite, dragLayerRoot);
             return token;
         }
 
@@ -50,9 +53,11 @@ namespace tmkoc.lunchforbuilders
         {
             if (tokenPrefab == null || manager == null) return;
             activeToken = Instantiate(tokenPrefab, dragLayer);
-            activeToken.InitAsPantryToken(manager, ingredientId, rectTransform.position, dragLayer);
+            activeToken.InitAsPantryToken(manager, ingredientId, IconSprite, rectTransform.position, dragLayer);
             activeToken.BeginExternalDrag(eventData);
         }
+
+        private Sprite IconSprite => icon != null ? icon.sprite : null;
 
         public void OnDrag(PointerEventData eventData) => activeToken?.ContinueExternalDrag(eventData);
 

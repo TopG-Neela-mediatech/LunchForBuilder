@@ -1,6 +1,7 @@
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace tmkoc.lunchforbuilders
 {
@@ -21,6 +22,8 @@ namespace tmkoc.lunchforbuilders
         [Header("Visual")]
         [SerializeField] private RectTransform rectTransform;
         [SerializeField] private CanvasGroup canvasGroup;
+        [Tooltip("Swapped to the matching ingredient sprite at spawn time -- one shared token prefab renders every ingredient.")]
+        [SerializeField] private Image iconImage;
 
         [Header("Drag Feel")]
         [SerializeField] private float dragScale = 1.15f;
@@ -38,7 +41,7 @@ namespace tmkoc.lunchforbuilders
 
         // ---- Add-to-station tokens: spawned + driven externally by PantrySlot ----
 
-        public void InitAsPantryToken(CookingManager owningManager, string id, Vector3 worldSpawnPosition, RectTransform dragLayerRoot)
+        public void InitAsPantryToken(CookingManager owningManager, string id, Sprite icon, Vector3 worldSpawnPosition, RectTransform dragLayerRoot)
         {
             manager = owningManager;
             IngredientId = id;
@@ -46,6 +49,7 @@ namespace tmkoc.lunchforbuilders
             dragLayer = dragLayerRoot;
             isLocked = false;
             rectTransform.position = worldSpawnPosition;
+            SetIcon(icon);
         }
 
         public void BeginExternalDrag(PointerEventData eventData)
@@ -66,13 +70,19 @@ namespace tmkoc.lunchforbuilders
 
         // ---- Remove-from-station tokens: placed instantly, then dragged natively ----
 
-        public void InitAsPlacedToken(CookingManager owningManager, string id, RectTransform dragLayerRoot)
+        public void InitAsPlacedToken(CookingManager owningManager, string id, Sprite icon, RectTransform dragLayerRoot)
         {
             manager = owningManager;
             IngredientId = id;
             Mode = IngredientDragMode.RemoveFromStation;
             dragLayer = dragLayerRoot;
             isLocked = false;
+            SetIcon(icon);
+        }
+
+        private void SetIcon(Sprite icon)
+        {
+            if (iconImage != null) iconImage.sprite = icon;
         }
 
         // Places this token directly at a station anchor with no tween -- used for

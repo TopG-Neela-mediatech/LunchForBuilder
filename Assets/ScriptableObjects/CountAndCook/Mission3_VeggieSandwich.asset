@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ac521d7c376ee54a9973b12a6cd1ce3, type: 3}
+  m_Name: Mission3_VeggieSandwich
+  m_EditorClassIdentifier: 
+  dishName: Veggie Sandwich
+  learningRule: 2
+  requirements:
+  - ingredientId: BottomBreadSlice
+    icon: {fileID: 21300000, guid: 1fde7709171e7d74fabb7556436d1856, type: 3}
+    requiredCount: 1
+    isRemoval: 0
+    sequenceOrder: 0
+  - ingredientId: CucumberSlice
+    icon: {fileID: 21300000, guid: 0538fbb30130a2b4e93b6d2e452de980, type: 3}
+    requiredCount: 2
+    isRemoval: 0
+    sequenceOrder: 1
+  - ingredientId: TomatoSlice
+    icon: {fileID: 21300000, guid: 01b207c5feba2a747852ca05b6ed8228, type: 3}
+    requiredCount: 2
+    isRemoval: 0
+    sequenceOrder: 2
+  - ingredientId: LettuceLeaf
+    icon: {fileID: 0}
+    requiredCount: 3
+    isRemoval: 0
+    sequenceOrder: 3
+  - ingredientId: TopBreadSlice
+    icon: {fileID: 21300000, guid: 34e22155008c96f4182a1ee168e7cab6, type: 3}
+    requiredCount: 1
+    isRemoval: 0
+    sequenceOrder: 4
+  startingIngredients: []
+  memoryRevealSeconds: 0
+  peekRevealSeconds: 0

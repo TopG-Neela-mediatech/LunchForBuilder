@@ -16,6 +16,8 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private GameManager gameManager;
 
         [Header("Scene References")]
+        [Tooltip("Parent of everything gameplay-visual (pantry, station, recipe card, Serve/Reset). Starts inactive in the scene; shown the moment the first mission starts, whether that's right after the storyboard or immediately if there's no storyboard.")]
+        [SerializeField] private GameObject gameplayRoot;
         [SerializeField] private PreparationStation station;
         [SerializeField] private PantrySlot[] pantrySlots;
         [SerializeField] private RecipeCardController recipeCard;
@@ -47,10 +49,13 @@ namespace tmkoc.lunchforbuilders
             currentSequenceStep = mission.LearningRule == LearningRule.OrderAndCounting ? 0 : -1;
             removedSoFar.Clear();
 
+            if (gameplayRoot != null) gameplayRoot.SetActive(true);
+
             station.Clear();
             SeedStartingIngredients();
 
             recipeCard?.Setup(mission);
+            UpdatePantryVisibility();
             UpdatePantryInteractivity();
             RefreshServeButton();
             RaiseProgress();
@@ -174,6 +179,24 @@ namespace tmkoc.lunchforbuilders
             UpdatePantryInteractivity();
         }
 
+        // All 5 missions share one scene/pantry tray, so a pantry slot must be hidden entirely
+        // whenever its ingredient isn't part of the CURRENT mission's add-requirements -- e.g. the
+        // Ice Cube slot used to add 6 cubes in Mission 1 has no business appearing in Mission 4,
+        // where Ice Cube only ever appears as a removal requirement (the 6 starting cubes are
+        // seeded directly into the station, never dragged in from this pantry).
+        private void UpdatePantryVisibility()
+        {
+            foreach (var slot in pantrySlots)
+            {
+                bool usedThisMission = false;
+                foreach (var req in currentMission.Requirements)
+                {
+                    if (!req.isRemoval && req.ingredientId == slot.IngredientId) { usedThisMission = true; break; }
+                }
+                slot.gameObject.SetActive(usedThisMission);
+            }
+        }
+
         // Only meaningful for OrderAndCounting missions -- every other mission leaves every pantry
         // slot interactable throughout (over-adding is allowed; it just bounces back, matching the
         // GDD's "Too-many Ingredient bounce" / "Extra Ingredient Boing" feedback).
@@ -232,6 +255,9 @@ namespace tmkoc.lunchforbuilders
             StartCoroutine(ServeCompleteRoutine());
         }
 
+        // Holds on the gratification beat, then reports the mission done -- LevelManager reacts by
+        // showing the existing win panel (EndPanelScript.ShowWin()) as the "Mission Complete" beat,
+        // whether this was mission 1 or mission 5.
         private IEnumerator ServeCompleteRoutine()
         {
             yield return new WaitForSeconds(serveCompleteDelay);

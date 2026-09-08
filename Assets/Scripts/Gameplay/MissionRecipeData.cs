@@ -12,6 +12,8 @@ namespace tmkoc.lunchforbuilders
     public class IngredientRequirement
     {
         public string ingredientId;
+        [Tooltip("Shown on the Recipe Card row for this ingredient.")]
+        public Sprite icon;
         [Min(1)] public int requiredCount = 1;
         [Tooltip("True if this ingredient must be dragged OUT of the station rather than added to it (Mission 4's ice cubes).")]
         public bool isRemoval;

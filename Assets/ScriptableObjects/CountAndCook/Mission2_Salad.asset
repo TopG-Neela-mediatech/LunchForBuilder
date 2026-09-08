@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ac521d7c376ee54a9973b12a6cd1ce3, type: 3}
+  m_Name: Mission2_Salad
+  m_EditorClassIdentifier: 
+  dishName: Salad
+  learningRule: 1
+  requirements:
+  - ingredientId: BroccoliPiece
+    icon: {fileID: 21300000, guid: 91535c9603c65b34184f83bdf9641c72, type: 3}
+    requiredCount: 4
+    isRemoval: 0
+    sequenceOrder: -1
+  - ingredientId: TomatoPiece
+    icon: {fileID: 21300000, guid: 623cbf8a726414946bf828b9ada47507, type: 3}
+    requiredCount: 3
+    isRemoval: 0
+    sequenceOrder: -1
+  - ingredientId: CornPiece
+    icon: {fileID: 21300000, guid: 1d623d953b86d9841a90e238d3635a74, type: 3}
+    requiredCount: 5
+    isRemoval: 0
+    sequenceOrder: -1
+  - ingredientId: BellPepperPiece
+    icon: {fileID: 21300000, guid: 9a671cb3a91cfe94d8a0f6b5b75eea18, type: 3}
+    requiredCount: 2
+    isRemoval: 0
+    sequenceOrder: -1
+  startingIngredients: []
+  memoryRevealSeconds: 0
+  peekRevealSeconds: 0

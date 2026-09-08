@@ -41,6 +41,10 @@ namespace tmkoc.lunchforbuilders
             nextButton.gameObject.SetActive(false);
             retryButton.onClick.AddListener(OnButtonClicked);
             nextButton.onClick.AddListener(OnButtonClicked);
+            // Registered once here, not inside ShowWin() -- ShowWin() is now called once per
+            // mission (up to 5 times a playthrough), and AddListener there would stack a duplicate
+            // LoadNextLevel() call onto every subsequent mission's Next tap.
+            nextButton.onClick.AddListener(() => GameManager.Instance.LevelManager.LoadNextLevel());
         }
         private void Start()
         {
@@ -58,11 +62,10 @@ namespace tmkoc.lunchforbuilders
         // Public API
         public void ShowWin()
         {
-            Show(winPanel, nextButton); 
+            Show(winPanel, nextButton);
          //S   Sprite winSprite = GameManager.Instance.LevelManager.CurrentLevelData.winPanelSprite;
           //  winChrachterImage.sprite = winSprite;
-            nextButton.onClick.AddListener(()=>GameManager.Instance.LevelManager.LoadNextLevel());
-            RotateRaysLoop(winRaysT, 8f, true);          
+            RotateRaysLoop(winRaysT, 8f, true);
         }
 
         public void ShowLose()

@@ -14,27 +14,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StorySystem.Data.StoryData
   slides:
   - backgroundSprite: {fileID: 21300000, guid: e0ddde8c3d2c1334f808ef9b8079740c, type: 3}
-    foregroundSprite: {fileID: 21300000, guid: 81508a4983361b8408f5ce7a01bfe751, type: 3}
-    captionText: Oh no! It rained so much that the roads are flooded! Some of our
-      friends need our help!
+    foregroundSprite: {fileID: 21300000, guid: f09ba26d6c17eac45953a3036c783207, type: 3}
+    captionText: Lets Play!
     displayDuration: 3
     transitionIn: 0
     transitionOut: 1
     narrationClip: {fileID: 0}
     slideEnterSFX: {fileID: 0}
   - backgroundSprite: {fileID: 21300000, guid: e0ddde8c3d2c1334f808ef9b8079740c, type: 3}
-    foregroundSprite: {fileID: 21300000, guid: fe8bde07550e1c24aadf68b3098f02e6, type: 3}
-    captionText: Can you help the ambulance find a safe way to the hospital? Our
-      friends are waiting!
+    foregroundSprite: {fileID: 21300000, guid: 4463b2b66644c3146b46da47b755e305, type: 3}
+    captionText: "We\u2019re so hungry! We need some energy before we can continue!"
     displayDuration: 3
     transitionIn: 0
     transitionOut: 1
     narrationClip: {fileID: 0}
     slideEnterSFX: {fileID: 0}
   - backgroundSprite: {fileID: 21300000, guid: e0ddde8c3d2c1334f808ef9b8079740c, type: 3}
-    foregroundSprite: {fileID: 21300000, guid: a81336f2fc2f97d4d8837ac76e06531e, type: 3}
-    captionText: I knew you could do it! Let's guide the ambulance and save our friends
-      together!
+    foregroundSprite: {fileID: 21300000, guid: d355406d15af1ec4ca7f0d0a059baadd, type: 3}
+    captionText: "We\u2019re so hungry! We need some energy before we can continue!"
     displayDuration: 3
     transitionIn: 0
     transitionOut: 1

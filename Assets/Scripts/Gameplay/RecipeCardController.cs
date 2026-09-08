@@ -6,14 +6,13 @@ using UnityEngine.UI;
 
 namespace tmkoc.lunchforbuilders
 {
+    // The row IS the icon -- icon.gameObject doubles as the row's root (shown/hidden as a unit),
+    // so there's no separate root reference to keep in sync with it.
     [Serializable]
     public class RecipeCardRow
     {
-        public GameObject root;
         public Image icon;
-        public TMP_Text requiredCountText;
         public TMP_Text counterText;
-        public GameObject completeGlow;
     }
 
     // Renders the current mission's requirement rows and, for Memory missions, owns the
@@ -48,12 +47,11 @@ namespace tmkoc.lunchforbuilders
             for (int i = 0; i < rows.Length; i++)
             {
                 bool inUse = requirements != null && i < requirements.Length;
-                if (rows[i].root != null) rows[i].root.SetActive(inUse);
+                if (rows[i].icon != null) rows[i].icon.gameObject.SetActive(inUse);
                 if (!inUse) continue;
 
-                if (rows[i].requiredCountText != null) rows[i].requiredCountText.text = requirements[i].requiredCount.ToString();
+                if (rows[i].icon != null) rows[i].icon.sprite = requirements[i].icon;
                 if (rows[i].counterText != null) rows[i].counterText.text = $"0/{requirements[i].requiredCount}";
-                if (rows[i].completeGlow != null) rows[i].completeGlow.SetActive(false);
             }
 
             ShowFace(true);
@@ -66,9 +64,8 @@ namespace tmkoc.lunchforbuilders
         // current/required are already ordered to match mission.Requirements.
         public void UpdateRow(int index, int current, int required)
         {
-            if (index < 0 || index >= rows.Length || rows[index]?.root == null || !rows[index].root.activeSelf) return;
+            if (index < 0 || index >= rows.Length || rows[index]?.icon == null || !rows[index].icon.gameObject.activeSelf) return;
             if (rows[index].counterText != null) rows[index].counterText.text = $"{Mathf.Min(current, required)}/{required}";
-            if (rows[index].completeGlow != null) rows[index].completeGlow.SetActive(current >= required);
         }
 
         private IEnumerator MemoryRevealRoutine()

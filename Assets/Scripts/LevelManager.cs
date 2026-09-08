@@ -37,7 +37,6 @@ namespace tmkoc.lunchforbuilders
         private void Start()
         {
             GameManager.Instance.OnLevelStart += OnLevelStart;
-            GameManager.Instance.OnLevelWin += OnLevelWin;
             GameManager.Instance.OnMissionComplete += OnMissionComplete;
 
             // A returning player who already finished at least one mission skips straight back into
@@ -54,22 +53,14 @@ namespace tmkoc.lunchforbuilders
         {
             cookingManager?.StartMission(missions[currentLevelIndex], currentLevelIndex);
         }
-        // Fired by CookingManager once a dish has been served -- advance to the next mission, or
-        // finish the game once the Playground's last repair is served.
+        // Fired by CookingManager once a dish has been served. The same win panel doubles as the
+        // "Mission Complete" beat for every recipe, not just the last one -- LoadNextLevel() (wired
+        // to the panel's own Next button) is what decides whether that means the next recipe or the
+        // whole game is done.
         private void OnMissionComplete(int missionIndex)
         {
             currentLevelIndex = missionIndex + 1;
             HelperGameCategoryDataSaver.LevelCompleted(currentLevelIndex);
-
-            if (currentLevelIndex >= missions.Length)
-            {
-                GameManager.Instance.InvokeLevelWin();
-                return;
-            }
-            cookingManager?.StartMission(missions[currentLevelIndex], currentLevelIndex);
-        }
-        private void OnLevelWin()
-        {
             GameManager.Instance.EndPanelScript.ShowWin();
         }
         private void SetDataSaver()
@@ -77,16 +68,19 @@ namespace tmkoc.lunchforbuilders
             HelperGameCategoryDataSaver.Init(missions.Length);
             currentLevelIndex = Mathf.Clamp(HelperGameCategoryDataSaver.GetStartLevel(), 0, missions.Length - 1);
         }
-        // Restarting the whole game -- reloading the scene is simpler and more reliable than trying
-        // to manually reset every piece of mission/station state left over from the win.
+        // Called by the win panel's Next button once it's dismissed. If there's another recipe
+        // left, start it; otherwise every mission is done, so reload the scene -- simpler and more
+        // reliable than manually resetting every piece of mission/station state left over from the win.
         public void LoadNextLevel()
         {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            if (currentLevelIndex < missions.Length)
+                cookingManager?.StartMission(missions[currentLevelIndex], currentLevelIndex);
+            else
+                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
         private void OnDestroy()
         {
             GameManager.Instance.OnLevelStart -= OnLevelStart;
-            GameManager.Instance.OnLevelWin -= OnLevelWin;
             GameManager.Instance.OnMissionComplete -= OnMissionComplete;
             if (storyController != null) storyController.OnStoryFinished -= HandleStoryFinished;
         }
