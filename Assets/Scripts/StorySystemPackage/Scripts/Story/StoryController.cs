@@ -59,12 +59,13 @@ namespace tmkoc.lunchforbuilders
                 var slide = storyData.slides[_slideIndex];              
                 storyUI?.ShowSlide(slide);
                 storyAnimator?.AnimateSlideIn(slide.transitionIn);
-               // float dur = GameManager.Instance.SoundManager.PlayIntroSlide(_slideIndex);
-              /*  if (dur < 2)
-                {
-                    dur = 3;
-                }
-                yield return new WaitForSeconds(dur+0.5f);*/
+                // float dur = GameManager.Instance.SoundManager.PlayIntroSlide(_slideIndex);
+                /*  if (dur < 2)
+                  {
+                      dur = 3;
+                  }
+                  yield return new WaitForSeconds(dur+0.5f);*/
+                yield return new WaitForSeconds(3f);
                 if (_isSkipped) break;
                 storyAnimator?.AnimateSlideOut(slide.transitionOut);
                 yield return new WaitForSeconds(0.5f);
