@@ -33,7 +33,7 @@ MonoBehaviour:
     isRemoval: 0
     sequenceOrder: 2
   - ingredientId: LettuceLeaf
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 4798a26f794c6494e9d03a47be2b8782, type: 3}
     requiredCount: 3
     isRemoval: 0
     sequenceOrder: 3
