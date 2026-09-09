@@ -49,6 +49,11 @@ namespace tmkoc.lunchforbuilders
             dragLayer = dragLayerRoot;
             isLocked = false;
             rectTransform.position = worldSpawnPosition;
+            // So a rejected drop has somewhere to glide back to -- this token's spawn point in the
+            // pantry, since it's a fresh instance every drag and never reparents away from dragLayer
+            // unless SnapIntoStation succeeds.
+            restParent = dragLayer;
+            restAnchoredPos = rectTransform.anchoredPosition;
             SetIcon(icon);
         }
 
@@ -151,6 +156,14 @@ namespace tmkoc.lunchforbuilders
                 isLocked = false;
                 restParent = stationAnchor;
                 restAnchoredPos = Vector2.zero;
+                // A small "landed!" settle -- same shake used to signal rejection elsewhere, just
+                // gentler, so accepting a drop reads as a positive impact rather than a silent stop.
+                // Then shrink away entirely -- placed tokens all land at the same content anchor, so
+                // left visible they'd just pile up on top of each other; the recipe card's counter
+                // is what actually shows the count.
+                DOTween.Sequence()
+                    .Append(rectTransform.DOShakeAnchorPos(0.2f, strength: 12f, vibrato: 8))
+                    .Append(rectTransform.DOScale(0f, 0.3f));
             });
         }
 
@@ -162,21 +175,11 @@ namespace tmkoc.lunchforbuilders
             rectTransform.DOScale(0f, returnDuration).SetEase(Ease.InBack).OnComplete(() => Destroy(gameObject));
         }
 
-        // A pantry-spawned token dropped somewhere invalid (wrong ingredient, wrong step, already
-        // at quota) -- shake, then fade back into the pantry it came from and disappear. It never
-        // belonged anywhere on screen the way a placed token does, so it's discarded rather than parked.
-        public void BounceAndDestroy()
-        {
-            isLocked = true;
-            rectTransform.DOKill();
-            DOTween.Sequence()
-                .Append(rectTransform.DOShakeAnchorPos(0.25f, strength: 25f, vibrato: 6))
-                .Append(rectTransform.DOScale(0f, 0.2f).SetEase(Ease.InBack))
-                .OnComplete(() => Destroy(gameObject));
-        }
-
-        // A failed removal attempt (dropped back into the station, or not the ingredient/quota the
-        // current requirement allows) -- snap back to exactly where it was placed.
+        // Any invalid drop -- wrong ingredient, wrong step, already at quota, a failed removal
+        // attempt -- gets the same feedback: shake, then glide back to wherever this token came
+        // from. A pantry-spawned (AddToStation) token is a throwaway spun up fresh each drag, so it
+        // disappears once it arrives back; a token that was already really sitting in the station
+        // (RemoveFromStation) just resettles into its slot, unchanged.
         public void ReturnToRest()
         {
             isLocked = false;
@@ -184,7 +187,11 @@ namespace tmkoc.lunchforbuilders
             rectTransform.DOKill();
             DOTween.Sequence()
                 .Append(rectTransform.DOShakeAnchorPos(0.25f, strength: 25f, vibrato: 6))
-                .Append(rectTransform.DOAnchorPos(restAnchoredPos, returnDuration).SetEase(Ease.OutQuad));
+                .Append(rectTransform.DOAnchorPos(restAnchoredPos, returnDuration).SetEase(Ease.OutQuad))
+                .OnComplete(() =>
+                {
+                    if (Mode == IngredientDragMode.AddToStation) Destroy(gameObject);
+                });
         }
 
         private float GetCanvasScale()

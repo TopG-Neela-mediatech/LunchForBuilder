@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: Mission4_OrangeMangoJuice
   m_EditorClassIdentifier: 
   dishName: Orange Mango Juice
+  stationIcon: {fileID: 21300000, guid: 6faab7df9808fe1488e3694c6e300cc2, type: 3}
+  contentAnchorRestY: 150
   learningRule: 3
   requirements:
   - ingredientId: OrangeSlice

@@ -31,6 +31,11 @@ namespace tmkoc.lunchforbuilders
 
         private MissionRecipeData mission;
         private Coroutine memoryRoutine;
+        // Per-row removal bookkeeping (Mission 4's "Remove 2 Ice Cubes") -- a removal row shows how
+        // many are left in the station counting DOWN toward a target (e.g. "6/4"), not how many have
+        // been removed counting up, since that reads more clearly as "you need to take some out".
+        private bool[] rowIsRemoval;
+        private int[] rowStartingCount;
 
         private void Awake()
         {
@@ -43,6 +48,12 @@ namespace tmkoc.lunchforbuilders
             mission = missionData;
             StopMemoryRoutine();
 
+            if (rowIsRemoval == null || rowIsRemoval.Length != rows.Length)
+            {
+                rowIsRemoval = new bool[rows.Length];
+                rowStartingCount = new int[rows.Length];
+            }
+
             var requirements = mission.Requirements;
             for (int i = 0; i < rows.Length; i++)
             {
@@ -50,8 +61,16 @@ namespace tmkoc.lunchforbuilders
                 if (rows[i].icon != null) rows[i].icon.gameObject.SetActive(inUse);
                 if (!inUse) continue;
 
-                if (rows[i].icon != null) rows[i].icon.sprite = requirements[i].icon;
-                if (rows[i].counterText != null) rows[i].counterText.text = $"0/{requirements[i].requiredCount}";
+                var req = requirements[i];
+                if (rows[i].icon != null) rows[i].icon.sprite = req.icon;
+
+                rowIsRemoval[i] = req.isRemoval;
+                rowStartingCount[i] = req.isRemoval ? FindStartingCount(req.ingredientId) : 0;
+
+                if (rows[i].counterText != null)
+                    rows[i].counterText.text = req.isRemoval
+                        ? $"{rowStartingCount[i]}/{rowStartingCount[i] - req.requiredCount}"
+                        : $"0/{req.requiredCount}";
             }
 
             ShowFace(true);
@@ -61,11 +80,35 @@ namespace tmkoc.lunchforbuilders
                 memoryRoutine = StartCoroutine(MemoryRevealRoutine());
         }
 
-        // current/required are already ordered to match mission.Requirements.
+        // current/required are already ordered to match mission.Requirements. For a removal row,
+        // current is "removed so far" -- converted here into "remaining in the station / target
+        // remaining" (e.g. 6 ice cubes down to a target of 4), which reads far more clearly as
+        // "take some out" than a bare "0/2" removed-count would.
         public void UpdateRow(int index, int current, int required)
         {
             if (index < 0 || index >= rows.Length || rows[index]?.icon == null || !rows[index].icon.gameObject.activeSelf) return;
-            if (rows[index].counterText != null) rows[index].counterText.text = $"{Mathf.Min(current, required)}/{required}";
+            if (rows[index].counterText == null) return;
+
+            if (rowIsRemoval != null && rowIsRemoval[index])
+            {
+                int startingCount = rowStartingCount[index];
+                int remaining = startingCount - Mathf.Min(current, required);
+                int target = startingCount - required;
+                rows[index].counterText.text = $"{remaining}/{target}";
+            }
+            else
+            {
+                rows[index].counterText.text = $"{Mathf.Min(current, required)}/{required}";
+            }
+        }
+
+        private int FindStartingCount(string ingredientId)
+        {
+            var starting = mission.StartingIngredients;
+            if (starting == null) return 0;
+            foreach (var s in starting)
+                if (s.ingredientId == ingredientId) return s.requiredCount;
+            return 0;
         }
 
         private IEnumerator MemoryRevealRoutine()

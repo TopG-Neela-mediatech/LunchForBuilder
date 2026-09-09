@@ -53,14 +53,25 @@ namespace tmkoc.lunchforbuilders
         {
             cookingManager?.StartMission(missions[currentLevelIndex], currentLevelIndex);
         }
-        // Fired by CookingManager once a dish has been served. The same win panel doubles as the
-        // "Mission Complete" beat for every recipe, not just the last one -- LoadNextLevel() (wired
-        // to the panel's own Next button) is what decides whether that means the next recipe or the
-        // whole game is done.
+        // Fired by CookingManager once a dish has been served. Missions 1-4 all show this game's own
+        // win panel as the "Mission Complete" beat, regardless of build -- that's purely internal to
+        // this mini-game. The 5th (final) completion is different: if this build is embedded in the
+        // main PlaySchool app, hand off to ITS end-of-game panel instead of showing our own.
         private void OnMissionComplete(int missionIndex)
         {
             currentLevelIndex = missionIndex + 1;
             HelperGameCategoryDataSaver.LevelCompleted(currentLevelIndex);
+
+            if (currentLevelIndex >= missions.Length)
+            {
+#if PLAYSCHOOL_MAIN
+                EffectParticleControll.Instance.SpawnGameEndPanel();
+                GameOverEndPanel.Instance.AddTheListnerRetryGame();
+#else
+                GameManager.Instance.EndPanelScript.ShowWin();
+#endif
+                return;
+            }
             GameManager.Instance.EndPanelScript.ShowWin();
         }
         private void SetDataSaver()

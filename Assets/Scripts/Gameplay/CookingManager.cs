@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -29,10 +30,24 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("How long the serve/gratification beat holds before the mission is reported complete.")]
         [SerializeField] private float serveCompleteDelay = 1.5f;
 
+        [Header("Intro Reveal")]
+        [Tooltip("How long the Recipe Card (sliding in from off-screen left) and the Preparation Station's content (sliding up from off-screen bottom) take to reach their resting position -- both run at the same time.")]
+        [SerializeField] private float introSlideDuration = 1f;
+        [Tooltip("Delay before each pantry ingredient scales in, one after another, once the slide-in finishes.")]
+        [SerializeField] private float draggableStaggerDelay = 0.1f;
+        [Tooltip("How long each individual pantry ingredient's own scale-up (0 -> 1) takes.")]
+        [SerializeField] private float draggableScaleInDuration = 0.3f;
+
         private MissionRecipeData currentMission;
         private int currentMissionIndex;
         private int currentSequenceStep;
         private readonly Dictionary<string, int> removedSoFar = new Dictionary<string, int>();
+
+        private RectTransform recipeCardRect;
+        private RectTransform canvasRect;
+        private Vector2 recipeCardRestPos;
+        private Vector2 stationRestPos;
+        private Coroutine introRoutine;
 
         private void Awake()
         {
@@ -40,6 +55,14 @@ namespace tmkoc.lunchforbuilders
             if (serveButton != null) serveButton.onClick.AddListener(OnServePressed);
             if (resetButton != null) resetButton.onClick.AddListener(OnResetPressed);
             if (recipeCard != null) recipeCard.OnPeekUsed += HandlePeekUsed;
+
+            // Rest positions and the canvas they're measured against are captured once, up front --
+            // every later reveal computes its off-screen start from these, never from wherever the
+            // element happens to be mid-animation.
+            recipeCardRect = recipeCard != null ? recipeCard.GetComponent<RectTransform>() : null;
+            canvasRect = station.ContentAnchor.GetComponentInParent<Canvas>()?.GetComponent<RectTransform>();
+            if (recipeCardRect != null) recipeCardRestPos = recipeCardRect.anchoredPosition;
+            stationRestPos = station.ContentAnchor.anchoredPosition;
         }
 
         public void StartMission(MissionRecipeData mission, int missionIndex)
@@ -51,16 +74,85 @@ namespace tmkoc.lunchforbuilders
 
             if (gameplayRoot != null) gameplayRoot.SetActive(true);
 
-            station.Clear();
-            SeedStartingIngredients();
+            if (introRoutine != null) StopCoroutine(introRoutine);
+            introRoutine = StartCoroutine(IntroRevealRoutine());
+        }
 
-            recipeCard?.Setup(mission);
+        // Recipe Card slides in from the left, the Preparation Station's content slides in from the
+        // bottom (both at once), then the pantry ingredients pop in one by one, and only once all of
+        // that has finished does the mission actually become interactive.
+        private IEnumerator IntroRevealRoutine()
+        {
+            // Everything is prepared while off-screen/invisible, so nothing visibly "pops" the
+            // moment it slides or scales into view.
+            station.Clear();
+            station.SetContentSprite(currentMission.StationIcon);
+            SeedStartingIngredients();
+            recipeCard?.Setup(currentMission);
             UpdatePantryVisibility();
+
+            if (serveButton != null) serveButton.interactable = false;
+            foreach (var slot in pantrySlots)
+            {
+                slot.SetInteractable(false);
+                if (!slot.gameObject.activeSelf) continue;
+                slot.transform.DOKill();
+                slot.transform.localScale = Vector3.zero;
+            }
+
+            if (recipeCardRect != null)
+            {
+                recipeCardRect.DOKill();
+                recipeCardRect.anchoredPosition = GetOffscreenLeftPos(recipeCardRect, recipeCardRestPos);
+                recipeCardRect.DOAnchorPosX(recipeCardRestPos.x, introSlideDuration).SetEase(Ease.OutBack);
+            }
+            // X stays wherever it was set in the editor; only Y is per-mission (different container
+            // art -- jug vs plate vs blender -- can sit at a different height).
+            Vector2 stationTargetPos = new Vector2(stationRestPos.x, currentMission.ContentAnchorRestY);
+            station.ContentAnchor.DOKill();
+            station.ContentAnchor.anchoredPosition = GetOffscreenBottomPos(station.ContentAnchor, stationTargetPos);
+            station.ContentAnchor.DOAnchorPosY(stationTargetPos.y, introSlideDuration).SetEase(Ease.OutBack);
+
+            yield return new WaitForSeconds(introSlideDuration);
+            yield return RevealPantrySlotsRoutine();
+
             UpdatePantryInteractivity();
             RefreshServeButton();
             RaiseProgress();
 
-            gameManager.InvokeMissionStarted(missionIndex);
+            gameManager.InvokeMissionStarted(currentMissionIndex);
+            introRoutine = null;
+        }
+
+        private IEnumerator RevealPantrySlotsRoutine()
+        {
+            float lastTweenDuration = 0f;
+            foreach (var slot in pantrySlots)
+            {
+                if (!slot.gameObject.activeSelf) continue;
+                slot.transform.DOScale(1f, draggableScaleInDuration).SetEase(Ease.OutBack);
+                lastTweenDuration = draggableScaleInDuration;
+                yield return new WaitForSeconds(draggableStaggerDelay);
+            }
+            // The last slot's own tween keeps running after its stagger delay -- wait out whatever's left of it.
+            float remaining = lastTweenDuration - draggableStaggerDelay;
+            if (remaining > 0f) yield return new WaitForSeconds(remaining);
+        }
+
+        // Fully off the left edge regardless of resolution/aspect: half the canvas's own width plus
+        // half the target's own width, so it clears the screen no matter how big either one is.
+        private Vector2 GetOffscreenLeftPos(RectTransform target, Vector2 restPos)
+        {
+            if (canvasRect == null) return restPos;
+            float offsetX = canvasRect.rect.width * 0.5f + target.rect.width * 0.5f;
+            return restPos + new Vector2(-offsetX, 0f);
+        }
+
+        private Vector2 GetOffscreenBottomPos(RectTransform target, Vector2 restPos)
+        {
+            if (canvasRect == null) return restPos;
+            float offsetY = canvasRect.rect.height * 0.5f + target.rect.height * 0.5f;
+            return restPos + new Vector2(0f, -offsetY);
         }
 
         private void SeedStartingIngredients()
@@ -121,7 +213,7 @@ namespace tmkoc.lunchforbuilders
             }
             else
             {
-                token.BounceAndDestroy();
+                token.ReturnToRest();
             }
             return success;
         }

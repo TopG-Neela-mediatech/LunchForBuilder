@@ -23,14 +23,22 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private Color hoverValidColor = new Color(0.4f, 1f, 0.4f);
         [SerializeField] private Color hoverInvalidColor = new Color(1f, 0.4f, 0.4f);
 
+        [Tooltip("Swapped to the current mission's jug/plate/blender/bowl sprite -- one shared Preparation Station renders every mission's container.")]
+        [SerializeField] private Image contentImage;
         public RectTransform DropArea => dropArea;
         public RectTransform ContentAnchor => contentAnchor;
 
         private readonly Dictionary<string, int> placedCounts = new Dictionary<string, int>();
         private readonly Dictionary<string, List<IngredientController>> placedTokens = new Dictionary<string, List<IngredientController>>();
 
+        // The station icon (jug/plate/etc.) is what the player actually sees as "the container", so
+        // that's what a drop is tested against once it's assigned -- dropArea is only a fallback for
+        // before contentImage is wired up.
         public bool ContainsScreenPoint(Vector2 screenPoint, Camera cam)
-            => dropArea != null && RectTransformUtility.RectangleContainsScreenPoint(dropArea, screenPoint, cam);
+        {
+            RectTransform target = contentImage != null ? contentImage.rectTransform : dropArea;
+            return target != null && RectTransformUtility.RectangleContainsScreenPoint(target, screenPoint, cam);
+        }
 
         public int GetPlacedCount(string ingredientId) => placedCounts.TryGetValue(ingredientId, out int count) ? count : 0;
 
@@ -62,6 +70,11 @@ namespace tmkoc.lunchforbuilders
                     if (token != null) Destroy(token.gameObject);
             placedTokens.Clear();
             placedCounts.Clear();
+        }
+
+        public void SetContentSprite(Sprite sprite)
+        {
+            if (contentImage != null) contentImage.sprite = sprite;
         }
 
         public void SetHoverGlow(bool active, bool valid)
