@@ -30,6 +30,18 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private float snapDuration = 0.35f;
         [SerializeField] private float returnDuration = 0.3f;
 
+        [Header("Stacking (successful placement)")]
+        [Tooltip("Final scale once resting inside the station -- smaller than a dragged token so a handful of them can visibly pile up without dominating the container.")]
+        [SerializeField] private float stackedScale = 0.55f;
+        [Tooltip("Max random offset from the content anchor's center for a landed token, so placed ingredients pile up messily instead of stacking in an exact tower.")]
+        [SerializeField] private float stackRandomRadius = 40f;
+        [Tooltip("Phase 1 of landing: rising to the rim of the container, partway shrunk.")]
+        [SerializeField] private float dropToRimDuration = 0.15f;
+        [Tooltip("How far above the content anchor's center the 'rim' of phase 1 sits.")]
+        [SerializeField] private float rimHeightOffset = 60f;
+        [Tooltip("Phase 2 of landing: falling from the rim down into its final stacked spot.")]
+        [SerializeField] private float dropIntoContainerDuration = 0.25f;
+
         public string IngredientId { get; private set; }
         public IngredientDragMode Mode { get; private set; }
 
@@ -91,14 +103,17 @@ namespace tmkoc.lunchforbuilders
         }
 
         // Places this token directly at a station anchor with no tween -- used for
-        // startingIngredients seeded before the mission's first drop (Mission 4's ice cubes).
+        // startingIngredients seeded before the mission's first drop (Mission 4's ice cubes). Same
+        // stacked look as a successfully-dropped token (small random offset, shrunk scale), just
+        // without the fall animation, so the starting pile reads consistently with ones added later.
         public void PlaceInstantly(RectTransform stationAnchor)
         {
+            Vector2 stackedOffset = UnityEngine.Random.insideUnitCircle * stackRandomRadius;
             restParent = stationAnchor;
             rectTransform.SetParent(stationAnchor, false);
-            rectTransform.anchoredPosition = Vector2.zero;
-            rectTransform.localScale = Vector3.one;
-            restAnchoredPos = Vector2.zero;
+            rectTransform.anchoredPosition = stackedOffset;
+            rectTransform.localScale = Vector3.one * stackedScale;
+            restAnchoredPos = stackedOffset;
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -144,26 +159,37 @@ namespace tmkoc.lunchforbuilders
 
         // ---- Outcomes, driven by CookingManager after it resolves the drop ----
 
+        // Lands in two beats: rises to the container's rim (partway shrunk), then falls from there
+        // into a random spot inside (fully shrunk to stackedScale) -- reads as "dropped in", rather
+        // than sliding flat across the screen. Stays visible and parented under the station at a
+        // small random offset, so several placed ingredients visibly pile up instead of either
+        // stacking in one exact spot or vanishing once counted.
         public void SnapIntoStation(RectTransform stationAnchor)
         {
             isLocked = true;
-            Vector2 targetAnchored = ToLocalAnchoredPos(stationAnchor, dragLayer);
-            rectTransform.DOAnchorPos(targetAnchored, snapDuration).SetEase(Ease.OutBack).OnComplete(() =>
+            Vector2 anchorLocalPos = ToLocalAnchoredPos(stationAnchor, dragLayer);
+            Vector2 rimPos = anchorLocalPos + new Vector2(0f, rimHeightOffset);
+            Vector2 stackedOffset = UnityEngine.Random.insideUnitCircle * stackRandomRadius;
+            Vector2 landedPos = anchorLocalPos + stackedOffset;
+            float rimScale = (1f + stackedScale) * 0.5f;
+
+            rectTransform.DOKill();
+            Sequence seq = DOTween.Sequence();
+            seq.Append(rectTransform.DOAnchorPos(rimPos, dropToRimDuration).SetEase(Ease.OutQuad));
+            seq.Join(rectTransform.DOScale(rimScale, dropToRimDuration));
+            seq.Append(rectTransform.DOAnchorPos(landedPos, dropIntoContainerDuration).SetEase(Ease.InQuad));
+            seq.Join(rectTransform.DOScale(stackedScale, dropIntoContainerDuration));
+            seq.OnComplete(() =>
             {
                 rectTransform.SetParent(stationAnchor, false);
-                rectTransform.anchoredPosition = Vector2.zero;
-                rectTransform.localScale = Vector3.one;
+                rectTransform.anchoredPosition = stackedOffset;
+                rectTransform.localScale = Vector3.one * stackedScale;
                 isLocked = false;
                 restParent = stationAnchor;
-                restAnchoredPos = Vector2.zero;
-                // A small "landed!" settle -- same shake used to signal rejection elsewhere, just
-                // gentler, so accepting a drop reads as a positive impact rather than a silent stop.
-                // Then shrink away entirely -- placed tokens all land at the same content anchor, so
-                // left visible they'd just pile up on top of each other; the recipe card's counter
-                // is what actually shows the count.
-                DOTween.Sequence()
-                    .Append(rectTransform.DOShakeAnchorPos(0.2f, strength: 12f, vibrato: 8))
-                    .Append(rectTransform.DOScale(0f, 0.3f));
+                restAnchoredPos = stackedOffset;
+                // A small "landed!" settle, gentler than the rejection shake -- accepting a drop
+                // reads as a positive impact rather than a silent stop.
+                rectTransform.DOShakeAnchorPos(0.15f, strength: 8f, vibrato: 6);
             });
         }
 
@@ -185,13 +211,17 @@ namespace tmkoc.lunchforbuilders
             isLocked = false;
             rectTransform.SetParent(restParent, true);
             rectTransform.DOKill();
-            DOTween.Sequence()
-                .Append(rectTransform.DOShakeAnchorPos(0.25f, strength: 25f, vibrato: 6))
-                .Append(rectTransform.DOAnchorPos(restAnchoredPos, returnDuration).SetEase(Ease.OutQuad))
-                .OnComplete(() =>
-                {
-                    if (Mode == IngredientDragMode.AddToStation) Destroy(gameObject);
-                });
+            // A RemoveFromStation token settles back to its stacked-in-the-station size; an
+            // AddToStation token is about to be destroyed anyway, so 1 is just a tidy default.
+            float targetScale = Mode == IngredientDragMode.RemoveFromStation ? stackedScale : 1f;
+            Sequence seq = DOTween.Sequence();
+            seq.Append(rectTransform.DOShakeAnchorPos(0.25f, strength: 25f, vibrato: 6));
+            seq.Append(rectTransform.DOAnchorPos(restAnchoredPos, returnDuration).SetEase(Ease.OutQuad));
+            seq.Join(rectTransform.DOScale(targetScale, returnDuration));
+            seq.OnComplete(() =>
+            {
+                if (Mode == IngredientDragMode.AddToStation) Destroy(gameObject);
+            });
         }
 
         private float GetCanvasScale()

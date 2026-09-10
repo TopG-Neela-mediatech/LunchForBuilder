@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dishName: Salad
   stationIcon: {fileID: 21300000, guid: 33d02b5cbaff41d4ea67184be633dead, type: 3}
+  completedRecipeSprite: {fileID: 21300000, guid: 00c9411c8f24574488f92975404c415d, type: 3}
   contentAnchorRestY: 25
   learningRule: 1
   requirements:

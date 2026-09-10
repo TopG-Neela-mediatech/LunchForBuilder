@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 03ffbf849ab42a348a5f3d99f49e3870
+guid: b47eb9475b6717c44bf58fab792182db
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5983672484659680106
-    second: TutorialHandWithoutOutline_0
+      213: 2060161710890128375
+    second: Rainbow Fruit bowl_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -49,7 +49,7 @@ TextureImporter:
   spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
-  alignment: 2
+  alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 2048
+    maxTextureSize: 1024
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: TutorialHandWithoutOutline_0
+      name: Rainbow Fruit bowl_0
       rect:
         serializedVersion: 2
-        x: 160
-        y: 12
-        width: 703
-        height: 1001
+        x: 0
+        y: 0
+        width: 1179
+        height: 514
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a635b640c664a0350800000000000000
-      internalID: 5983672484659680106
+      spriteID: 7f3977d292a279c10800000000000000
+      internalID: 2060161710890128375
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      TutorialHandWithoutOutline_0: 5983672484659680106
+      Rainbow Fruit bowl_0: 2060161710890128375
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

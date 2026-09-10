@@ -27,6 +27,9 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private Image contentImage;
         public RectTransform DropArea => dropArea;
         public RectTransform ContentAnchor => contentAnchor;
+        // Same fallback as ContainsScreenPoint -- wherever a real drop is actually tested against is
+        // also where a drag hint should visually land.
+        public RectTransform HintTargetArea => contentImage != null ? contentImage.rectTransform : dropArea;
 
         private readonly Dictionary<string, int> placedCounts = new Dictionary<string, int>();
         private readonly Dictionary<string, List<IngredientController>> placedTokens = new Dictionary<string, List<IngredientController>>();
@@ -41,6 +44,14 @@ namespace tmkoc.lunchforbuilders
         }
 
         public int GetPlacedCount(string ingredientId) => placedCounts.TryGetValue(ingredientId, out int count) ? count : 0;
+
+        // A live token currently placed in the station, for the tutorial hand to point at when
+        // hinting a removal -- doesn't remove or mutate anything, just looks.
+        public IngredientController PeekPlacedToken(string ingredientId)
+        {
+            if (placedTokens.TryGetValue(ingredientId, out var list) && list.Count > 0) return list[list.Count - 1];
+            return null;
+        }
 
         public void RegisterPlaced(string ingredientId, IngredientController token)
         {

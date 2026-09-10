@@ -43,6 +43,12 @@ namespace tmkoc.lunchforbuilders
         private int currentSequenceStep;
         private readonly Dictionary<string, int> removedSoFar = new Dictionary<string, int>();
 
+        // Only the very first hint shown in the whole play session is immediate (the player hasn't
+        // been taught the drag yet); every hint after that -- including later ones within mission
+        // 1 itself -- waits out the normal idle delay. Same idea as TutorialController's
+        // isFirstHintEver in BuildABot.
+        private bool isFirstHintEver = true;
+
         private RectTransform recipeCardRect;
         private RectTransform canvasRect;
         private Vector2 recipeCardRestPos;
@@ -83,6 +89,8 @@ namespace tmkoc.lunchforbuilders
         // that has finished does the mission actually become interactive.
         private IEnumerator IntroRevealRoutine()
         {
+            gameManager.TutorialManager?.CancelHint();
+
             // Everything is prepared while off-screen/invisible, so nothing visibly "pops" the
             // moment it slides or scales into view.
             station.Clear();
@@ -172,8 +180,10 @@ namespace tmkoc.lunchforbuilders
             }
         }
 
-        // Reserved for a future idle-hint hand, same hook shape as RobotAssemblyManager.NotifyInteractionStarted.
-        public void NotifyInteractionStarted(IngredientController token) { }
+        // The instant the player touches ANYTHING, the current hint hand is dismissed -- a fresh one
+        // (pointed at whatever the new next-correct-action is) gets scheduled the next time
+        // RefreshTutorialHint runs, which happens right after this interaction resolves.
+        public void NotifyInteractionStarted(IngredientController token) => gameManager.TutorialManager?.CancelHint();
 
         public void UpdateHoverFeedback(IngredientController token, PointerEventData eventData)
         {
@@ -319,6 +329,57 @@ namespace tmkoc.lunchforbuilders
                 recipeCard?.UpdateRow(i, current, req.requiredCount);
             }
             gameManager.InvokeRecipeProgress(placedTotal, requiredTotal);
+            RefreshTutorialHint();
+        }
+
+        // Works out the single next correct action -- a removal outstanding anywhere takes priority
+        // (there's no fixed ordering between add/remove requirements in the data), then the first
+        // unmet add requirement respecting Mission 3's sequence gate, then a nudge toward Serve once
+        // everything's satisfied. Called after every mission start and every resolved drop, so the
+        // hint always tracks the current game state rather than going stale.
+        private void RefreshTutorialHint()
+        {
+            var tutorial = gameManager.TutorialManager;
+            if (tutorial == null || currentMission == null) return;
+
+            bool immediate = isFirstHintEver;
+
+            if (IsRecipeComplete())
+            {
+                if (serveButton != null)
+                {
+                    tutorial.ShowTapHint(serveButton.GetComponent<RectTransform>(), immediate);
+                    isFirstHintEver = false;
+                }
+                else tutorial.CancelHint();
+                return;
+            }
+
+            foreach (var req in currentMission.Requirements)
+            {
+                if (!req.isRemoval) continue;
+                int removed = removedSoFar.TryGetValue(req.ingredientId, out int r) ? r : 0;
+                if (removed >= req.requiredCount) continue;
+                var placedToken = station.PeekPlacedToken(req.ingredientId);
+                if (placedToken == null) continue;
+                tutorial.ShowRemoveHint(placedToken.GetComponent<RectTransform>(), immediate);
+                isFirstHintEver = false;
+                return;
+            }
+
+            foreach (var req in currentMission.Requirements)
+            {
+                if (req.isRemoval) continue;
+                if (station.GetPlacedCount(req.ingredientId) >= req.requiredCount) continue;
+                if (req.sequenceOrder >= 0 && req.sequenceOrder != currentSequenceStep) continue;
+                var slot = FindPantrySlot(req.ingredientId);
+                if (slot == null || !slot.gameObject.activeSelf) continue;
+                tutorial.ShowAddHint(slot.GetComponent<RectTransform>(), station.HintTargetArea, immediate);
+                isFirstHintEver = false;
+                return;
+            }
+
+            tutorial.CancelHint();
         }
 
         private bool IsRecipeComplete()
@@ -333,17 +394,20 @@ namespace tmkoc.lunchforbuilders
             return true;
         }
 
+        // Serve stays enabled throughout -- the player can tap it at any time to check whether
+        // they're done; OnServePressed itself is a no-op until the recipe is actually complete.
         private void RefreshServeButton()
         {
-            if (serveButton != null) serveButton.interactable = IsRecipeComplete();
+            if (serveButton != null) serveButton.interactable = true;
         }
 
         // Completion is a player action (tap Serve), not automatic, matching the GDD's
-        // "Serve active/inactive state" and "Serve button" UI assets.
+        // "Serve button" UI asset -- but the button is never disabled, so tapping early is just ignored.
         private void OnServePressed()
         {
             if (!IsRecipeComplete()) return;
             if (serveButton != null) serveButton.interactable = false;
+            station.SetContentSprite(currentMission.CompletedRecipeSprite);
             StartCoroutine(ServeCompleteRoutine());
         }
 

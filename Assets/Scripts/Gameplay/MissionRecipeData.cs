@@ -27,6 +27,8 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private string dishName;
         [Tooltip("Shown on the Preparation Station's content image once this mission starts -- the jug for Lemon Water, plate for Salad/Sandwich, blender for the Juice, bowl for the Fruit Bowl.")]
         [SerializeField] private Sprite stationIcon;
+        [Tooltip("Swapped in on top of Station Icon the moment Serve is pressed -- the finished dish (poured lemonade, plated salad, etc.) so the player sees what they actually made.")]
+        [SerializeField] private Sprite completedRecipeSprite;
         [Tooltip("The Preparation Station content anchor's resting Y position (anchoredPosition.y) once this mission's intro slide-in finishes. Different container art (jug vs plate vs blender) can sit at a different height, so this is set per mission rather than shared.")]
         [SerializeField] private float contentAnchorRestY;
         [SerializeField] private LearningRule learningRule;
@@ -41,6 +43,7 @@ namespace tmkoc.lunchforbuilders
 
         public string DishName => dishName;
         public Sprite StationIcon => stationIcon;
+        public Sprite CompletedRecipeSprite => completedRecipeSprite;
         public float ContentAnchorRestY => contentAnchorRestY;
         public LearningRule LearningRule => learningRule;
         public IngredientRequirement[] Requirements => requirements;
