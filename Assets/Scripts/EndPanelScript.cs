@@ -41,10 +41,11 @@ namespace tmkoc.lunchforbuilders
             nextButton.gameObject.SetActive(false);
             retryButton.onClick.AddListener(OnButtonClicked);
             nextButton.onClick.AddListener(OnButtonClicked);
-            // Registered once here, not inside ShowWin() -- ShowWin() is now called once per
-            // mission (up to 5 times a playthrough), and AddListener there would stack a duplicate
-            // LoadNextLevel() call onto every subsequent mission's Next tap.
+            // Registered once here, not inside ShowWin()/ShowLose() -- either can be shown more than
+            // once in a playthrough (every mission's win, or losing the same level repeatedly), and
+            // AddListener inside those methods would stack duplicate calls onto later taps.
             nextButton.onClick.AddListener(() => GameManager.Instance.LevelManager.LoadNextLevel());
+            retryButton.onClick.AddListener(() => GameManager.Instance.LevelManager.RetryCurrentLevel());
         }
         private void Start()
         {
@@ -73,7 +74,6 @@ namespace tmkoc.lunchforbuilders
             Show(losePanel, retryButton);
        //     Sprite loseSprite = GameManager.Instance.LevelManager.CurrentLevelData.losePanelSprite;
           //  loseChrachterImage.sprite = loseSprite;
-          //  retryButton.onClick.AddListener(() => GameManager.Instance.LevelManager.StartLevel());
             RotateRaysLoop(loseRaysT, 8f, false);
         }
 

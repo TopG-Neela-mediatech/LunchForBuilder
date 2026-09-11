@@ -33,6 +33,7 @@ namespace tmkoc.lunchforbuilders
         #region Events
         public event Action OnLevelWin;
         public event Action OnLevelStart;
+        public event Action OnLevelLose;
 
         // Count & Cook mission flow
         public event Action<int> OnMissionStarted;
@@ -43,6 +44,7 @@ namespace tmkoc.lunchforbuilders
 
         public void InvokeLevelStart() => OnLevelStart?.Invoke();
         public void InvokeLevelWin() => OnLevelWin?.Invoke();
+        public void InvokeLevelLose() => OnLevelLose?.Invoke();
 
         public void InvokeMissionStarted(int missionIndex) => OnMissionStarted?.Invoke(missionIndex);
         public void InvokeIngredientResolved(string ingredientId, bool wasCorrect) => OnIngredientResolved?.Invoke(ingredientId, wasCorrect);

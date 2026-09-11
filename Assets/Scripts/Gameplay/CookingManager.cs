@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 namespace tmkoc.lunchforbuilders
 {
@@ -17,17 +17,18 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private GameManager gameManager;
 
         [Header("Scene References")]
-        [Tooltip("Parent of everything gameplay-visual (pantry, station, recipe card, Serve/Reset). Starts inactive in the scene; shown the moment the first mission starts, whether that's right after the storyboard or immediately if there's no storyboard.")]
+        [Tooltip("Parent of everything gameplay-visual (pantry, station, recipe card). Starts inactive in the scene; shown the moment the first mission starts, whether that's right after the storyboard or immediately if there's no storyboard.")]
         [SerializeField] private GameObject gameplayRoot;
         [SerializeField] private PreparationStation station;
         [SerializeField] private PantrySlot[] pantrySlots;
         [SerializeField] private RecipeCardController recipeCard;
         [SerializeField] private RectTransform dragLayer;
-        [SerializeField] private Button serveButton;
-        [SerializeField] private Button resetButton;
+        [SerializeField] private CharacterReactionController characterReaction;
+        [Tooltip("MM:SS countdown display. Starts once the level-start animation finishes, stops the moment the recipe is complete or time runs out.")]
+        [SerializeField] private TMP_Text timerText;
 
         [Header("Pacing")]
-        [Tooltip("How long the serve/gratification beat holds before the mission is reported complete.")]
+        [Tooltip("How long the gratification beat holds (dish swaps to its completed sprite) before the mission is reported complete -- fires automatically the instant the recipe is finished, no button press.")]
         [SerializeField] private float serveCompleteDelay = 1.5f;
 
         [Header("Intro Reveal")]
@@ -48,18 +49,20 @@ namespace tmkoc.lunchforbuilders
         // 1 itself -- waits out the normal idle delay. Same idea as TutorialController's
         // isFirstHintEver in BuildABot.
         private bool isFirstHintEver = true;
+        // Guards the auto-serve from firing more than once per mission -- RaiseProgress runs on
+        // every resolved drop, and the recipe stays "complete" for every one of them after the first.
+        private bool hasCompletedThisMission;
 
         private RectTransform recipeCardRect;
         private RectTransform canvasRect;
         private Vector2 recipeCardRestPos;
         private Vector2 stationRestPos;
         private Coroutine introRoutine;
+        private Coroutine timerRoutine;
 
         private void Awake()
         {
             foreach (var slot in pantrySlots) slot.Init(this, dragLayer);
-            if (serveButton != null) serveButton.onClick.AddListener(OnServePressed);
-            if (resetButton != null) resetButton.onClick.AddListener(OnResetPressed);
             if (recipeCard != null) recipeCard.OnPeekUsed += HandlePeekUsed;
 
             // Rest positions and the canvas they're measured against are captured once, up front --
@@ -77,6 +80,8 @@ namespace tmkoc.lunchforbuilders
             currentMissionIndex = missionIndex;
             currentSequenceStep = mission.LearningRule == LearningRule.OrderAndCounting ? 0 : -1;
             removedSoFar.Clear();
+            hasCompletedThisMission = false;
+            StopTimer();
 
             if (gameplayRoot != null) gameplayRoot.SetActive(true);
 
@@ -97,9 +102,9 @@ namespace tmkoc.lunchforbuilders
             station.SetContentSprite(currentMission.StationIcon);
             SeedStartingIngredients();
             recipeCard?.Setup(currentMission);
+            characterReaction?.Setup(currentMission);
             UpdatePantryVisibility();
 
-            if (serveButton != null) serveButton.interactable = false;
             foreach (var slot in pantrySlots)
             {
                 slot.SetInteractable(false);
@@ -125,11 +130,48 @@ namespace tmkoc.lunchforbuilders
             yield return RevealPantrySlotsRoutine();
 
             UpdatePantryInteractivity();
-            RefreshServeButton();
+            characterReaction?.ShowHungry();
+            StartTimer();
             RaiseProgress();
 
             gameManager.InvokeMissionStarted(currentMissionIndex);
             introRoutine = null;
+        }
+
+        private void StartTimer()
+        {
+            StopTimer();
+            timerRoutine = StartCoroutine(TimerRoutine());
+        }
+
+        private void StopTimer()
+        {
+            if (timerRoutine != null)
+            {
+                StopCoroutine(timerRoutine);
+                timerRoutine = null;
+            }
+        }
+
+        private IEnumerator TimerRoutine()
+        {
+            float remaining = currentMission.TimeInSeconds;
+            UpdateTimerText(remaining);
+            while (remaining > 0f)
+            {
+                yield return null;
+                remaining -= Time.deltaTime;
+                UpdateTimerText(remaining);
+            }
+            timerRoutine = null;
+            gameManager.InvokeLevelLose();
+        }
+
+        private void UpdateTimerText(float secondsRemaining)
+        {
+            if (timerText == null) return;
+            int wholeSeconds = Mathf.CeilToInt(Mathf.Max(secondsRemaining, 0f));
+            timerText.text = $"{wholeSeconds / 60:00}:{wholeSeconds % 60:00}";
         }
 
         private IEnumerator RevealPantrySlotsRoutine()
@@ -205,6 +247,8 @@ namespace tmkoc.lunchforbuilders
                 ? ResolveAdd(token, overStation)
                 : ResolveRemove(token, overStation);
 
+            if (!success) characterReaction?.ShowSad();
+
             gameManager.InvokeIngredientResolved(token.IngredientId, success);
         }
 
@@ -219,7 +263,6 @@ namespace tmkoc.lunchforbuilders
                 token.SnapIntoStation(station.ContentAnchor);
                 AdvanceSequenceIfStepComplete(requirement);
                 RaiseProgress();
-                RefreshServeButton();
             }
             else
             {
@@ -240,7 +283,6 @@ namespace tmkoc.lunchforbuilders
                 station.RemoveSpecificToken(token.IngredientId, token);
                 token.PlayRemovedAndDestroy();
                 RaiseProgress();
-                RefreshServeButton();
             }
             else
             {
@@ -329,31 +371,46 @@ namespace tmkoc.lunchforbuilders
                 recipeCard?.UpdateRow(i, current, req.requiredCount);
             }
             gameManager.InvokeRecipeProgress(placedTotal, requiredTotal);
+
+            // Completion is automatic now -- the instant every requirement is satisfied, serve the
+            // dish and end the level, no button press needed. Guarded so it only fires once even
+            // though RaiseProgress keeps running (e.g. a stray drop attempt) after that.
+            if (!hasCompletedThisMission && IsRecipeComplete())
+            {
+                hasCompletedThisMission = true;
+                AutoServe();
+                return;
+            }
+
             RefreshTutorialHint();
+        }
+
+        // Swaps in the finished-dish sprite and starts the gratification hold -- the same beat that
+        // used to wait for a Serve tap, now triggered automatically the moment the recipe is done.
+        private void AutoServe()
+        {
+            StopTimer();
+            gameManager.TutorialManager?.CancelHint();
+            characterReaction?.ShowHappy();
+            station.SetContentSprite(currentMission.CompletedRecipeSprite);
+            // The individual ingredient icons were only ever a stand-in for "this dish is being
+            // built" -- once it's done, the completed-dish sprite replaces them, so the leftover
+            // icons need to stop sitting on top of it.
+            station.HidePlacedTokens();
+            StartCoroutine(ServeCompleteRoutine());
         }
 
         // Works out the single next correct action -- a removal outstanding anywhere takes priority
         // (there's no fixed ordering between add/remove requirements in the data), then the first
-        // unmet add requirement respecting Mission 3's sequence gate, then a nudge toward Serve once
-        // everything's satisfied. Called after every mission start and every resolved drop, so the
-        // hint always tracks the current game state rather than going stale.
+        // unmet add requirement respecting Mission 3's sequence gate. Called after every mission
+        // start and every resolved drop (as long as the recipe isn't already complete -- see
+        // RaiseProgress), so the hint always tracks the current game state rather than going stale.
         private void RefreshTutorialHint()
         {
             var tutorial = gameManager.TutorialManager;
             if (tutorial == null || currentMission == null) return;
 
             bool immediate = isFirstHintEver;
-
-            if (IsRecipeComplete())
-            {
-                if (serveButton != null)
-                {
-                    tutorial.ShowTapHint(serveButton.GetComponent<RectTransform>(), immediate);
-                    isFirstHintEver = false;
-                }
-                else tutorial.CancelHint();
-                return;
-            }
 
             foreach (var req in currentMission.Requirements)
             {
@@ -394,23 +451,6 @@ namespace tmkoc.lunchforbuilders
             return true;
         }
 
-        // Serve stays enabled throughout -- the player can tap it at any time to check whether
-        // they're done; OnServePressed itself is a no-op until the recipe is actually complete.
-        private void RefreshServeButton()
-        {
-            if (serveButton != null) serveButton.interactable = true;
-        }
-
-        // Completion is a player action (tap Serve), not automatic, matching the GDD's
-        // "Serve button" UI asset -- but the button is never disabled, so tapping early is just ignored.
-        private void OnServePressed()
-        {
-            if (!IsRecipeComplete()) return;
-            if (serveButton != null) serveButton.interactable = false;
-            station.SetContentSprite(currentMission.CompletedRecipeSprite);
-            StartCoroutine(ServeCompleteRoutine());
-        }
-
         // Holds on the gratification beat, then reports the mission done -- LevelManager reacts by
         // showing the existing win panel (EndPanelScript.ShowWin()) as the "Mission Complete" beat,
         // whether this was mission 1 or mission 5.
@@ -419,10 +459,6 @@ namespace tmkoc.lunchforbuilders
             yield return new WaitForSeconds(serveCompleteDelay);
             gameManager.InvokeMissionComplete(currentMissionIndex);
         }
-
-        // Clears the station and restarts the current recipe from scratch, no penalty -- the GDD's
-        // "Reset button" / "Reset interaction" assets.
-        private void OnResetPressed() => StartMission(currentMission, currentMissionIndex);
 
         private void HandlePeekUsed() => gameManager.InvokePeekUsed(currentMissionIndex);
 

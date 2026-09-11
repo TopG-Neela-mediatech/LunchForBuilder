@@ -41,6 +41,24 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("Memory missions only: how long a Peek reveals the card again.")]
         [SerializeField] private float peekRevealSeconds = 3f;
 
+        [Header("Character Reaction")]
+        [Tooltip("Default/waiting state shown through the mission, and reverted back to a few seconds after a Sad reaction.")]
+        [SerializeField] private Sprite hungryCharacterSprite;
+        [Tooltip("Shown briefly whenever the player drags something incorrectly.")]
+        [SerializeField] private Sprite sadCharacterSprite;
+        [Tooltip("Shown once the recipe is complete.")]
+        [SerializeField] private Sprite happyCharacterSprite;
+        [Tooltip("One is picked at random and popped above the character's head whenever the Hungry state shows.")]
+        [SerializeField] private Sprite[] hungryEmojis;
+        [Tooltip("One is picked at random and popped above the character's head whenever the Sad state shows.")]
+        [SerializeField] private Sprite[] sadEmojis;
+        [Tooltip("One is picked at random and popped above the character's head whenever the Happy state shows.")]
+        [SerializeField] private Sprite[] happyEmojis;
+
+        [Header("Timer")]
+        [Tooltip("How long the player has to finish this recipe once the level-start animation finishes, in seconds.")]
+        [SerializeField] private float timeInSeconds = 60f;
+
         public string DishName => dishName;
         public Sprite StationIcon => stationIcon;
         public Sprite CompletedRecipeSprite => completedRecipeSprite;
@@ -50,5 +68,12 @@ namespace tmkoc.lunchforbuilders
         public IngredientRequirement[] StartingIngredients => startingIngredients;
         public float MemoryRevealSeconds => memoryRevealSeconds;
         public float PeekRevealSeconds => peekRevealSeconds;
+        public Sprite HungryCharacterSprite => hungryCharacterSprite;
+        public Sprite SadCharacterSprite => sadCharacterSprite;
+        public Sprite HappyCharacterSprite => happyCharacterSprite;
+        public Sprite[] HungryEmojis => hungryEmojis;
+        public Sprite[] SadEmojis => sadEmojis;
+        public Sprite[] HappyEmojis => happyEmojis;
+        public float TimeInSeconds => timeInSeconds;
     }
 }

@@ -38,6 +38,7 @@ namespace tmkoc.lunchforbuilders
         {
             GameManager.Instance.OnLevelStart += OnLevelStart;
             GameManager.Instance.OnMissionComplete += OnMissionComplete;
+            GameManager.Instance.OnLevelLose += OnLevelLose;
 
             // A returning player who already finished at least one mission skips straight back into
             // gameplay -- the storyboard (broken playground, tired workers) only ever plays once.
@@ -74,6 +75,12 @@ namespace tmkoc.lunchforbuilders
             }
             GameManager.Instance.EndPanelScript.ShowWin();
         }
+        // Fired by CookingManager's timer running out -- currentLevelIndex is left untouched (this
+        // mission wasn't completed), so RetryCurrentLevel() below restarts the exact same recipe.
+        private void OnLevelLose()
+        {
+            GameManager.Instance.EndPanelScript.ShowLose();
+        }
         private void SetDataSaver()
         {
             HelperGameCategoryDataSaver.Init(missions.Length);
@@ -89,10 +96,18 @@ namespace tmkoc.lunchforbuilders
             else
                 SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
+        // Called by the lose panel's Retry button -- re-runs StartMission on the same recipe, which
+        // cleans up and rebuilds everything (station, pantry, character, timer) the same way any
+        // fresh mission start does.
+        public void RetryCurrentLevel()
+        {
+            cookingManager?.StartMission(missions[currentLevelIndex], currentLevelIndex);
+        }
         private void OnDestroy()
         {
             GameManager.Instance.OnLevelStart -= OnLevelStart;
             GameManager.Instance.OnMissionComplete -= OnMissionComplete;
+            GameManager.Instance.OnLevelLose -= OnLevelLose;
             if (storyController != null) storyController.OnStoryFinished -= HandleStoryFinished;
         }
     }

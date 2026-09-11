@@ -88,6 +88,16 @@ namespace tmkoc.lunchforbuilders
             if (contentImage != null) contentImage.sprite = sprite;
         }
 
+        // Hides every currently-placed ingredient token -- used the moment the recipe completes and
+        // the station swaps to the finished-dish sprite, so the individual ingredient icons don't
+        // keep sitting on top of it.
+        public void HidePlacedTokens()
+        {
+            foreach (var kvp in placedTokens)
+                foreach (var token in kvp.Value)
+                    if (token != null) token.gameObject.SetActive(false);
+        }
+
         public void SetHoverGlow(bool active, bool valid)
         {
             if (glowImage == null) return;
