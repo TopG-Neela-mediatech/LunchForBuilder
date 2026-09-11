@@ -1,115 +1,50 @@
-using System.Collections;
-using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace tmkoc.lunchforbuilders
 {
-    // The character portrait on the left of screen, plus the emoji that pops above its head to
-    // punctuate the current mood. CookingManager decides WHEN the mood changes (mission start =
-    // hungry, a wrong drag = sad, recipe complete = happy); this class only knows how to swap the
-    // portrait sprite and pop one random emoji from that mood's pool.
+    public enum CharacterMood { Hungry, Sad, Happy }
+
+    // The character portrait on the left of screen, plus the particle bursts that play above its
+    // head. Deliberately has no timers or state of its own -- CookingManager tracks recipe
+    // progress, time remaining, and idle time, and just tells this what to show/play right now.
     public class CharacterReactionController : MonoBehaviour
     {
         [SerializeField] private Image characterImage;
-        [Tooltip("Child of the character -- the emoji that pops above its head.")]
-        [SerializeField] private Image emojiImage;
 
-        [Header("Emoji Pop")]
-        [SerializeField] private float popInDuration = 0.3f;
-        [SerializeField] private float holdDuration = 1.2f;
-        [SerializeField] private float popOutDuration = 0.2f;
-
-        [Header("Sad -> Hungry Auto-Revert")]
-        [Tooltip("How long the Sad reaction stays up before reverting back to Hungry -- a wrong drag doesn't end the mission, so the character goes back to waiting.")]
-        [SerializeField] private float sadHoldDuration = 1.5f;
+        [Header("Reaction Particles")]
+        [Tooltip("One is picked at random and played for every correct action, and once the recipe is complete.")]
+        [SerializeField] private ParticleSystem[] happyParticles;
+        [Tooltip("One is picked at random and played for every incorrect action, whenever the player goes idle, and once at mission start.")]
+        [SerializeField] private ParticleSystem[] sadParticles;
 
         private MissionRecipeData mission;
-        private Sequence emojiSequence;
-        private Coroutine revertRoutine;
 
-        private void Awake()
-        {
-            if (emojiImage != null) emojiImage.gameObject.SetActive(false);
-        }
+        public void Setup(MissionRecipeData missionData) => mission = missionData;
 
-        // Called once per mission start -- just caches the sprite/emoji pools for this recipe.
-        // Doesn't show anything on its own; call ShowHungry() to actually start the reaction.
-        public void Setup(MissionRecipeData missionData)
+        public void SetSprite(CharacterMood mood)
         {
-            mission = missionData;
-            StopRevert();
-        }
-
-        public void ShowHungry()
-        {
-            StopRevert();
-            Apply(mission.HungryCharacterSprite, mission.HungryEmojis);
-        }
-
-        public void ShowHappy()
-        {
-            StopRevert();
-            Apply(mission.HappyCharacterSprite, mission.HappyEmojis);
-        }
-
-        // Temporary -- automatically reverts back to Hungry on its own after sadHoldDuration, since
-        // the mission keeps going after a wrong drag rather than ending.
-        public void ShowSad()
-        {
-            StopRevert();
-            Apply(mission.SadCharacterSprite, mission.SadEmojis);
-            revertRoutine = StartCoroutine(RevertToHungryAfterDelay());
-        }
-
-        private IEnumerator RevertToHungryAfterDelay()
-        {
-            yield return new WaitForSeconds(sadHoldDuration);
-            revertRoutine = null;
-            Apply(mission.HungryCharacterSprite, mission.HungryEmojis);
-        }
-
-        private void StopRevert()
-        {
-            if (revertRoutine != null)
+            if (mission == null || characterImage == null) return;
+            Sprite sprite = mood switch
             {
-                StopCoroutine(revertRoutine);
-                revertRoutine = null;
-            }
+                CharacterMood.Happy => mission.HappyCharacterSprite,
+                CharacterMood.Sad => mission.SadCharacterSprite,
+                _ => mission.HungryCharacterSprite,
+            };
+            if (sprite != null) characterImage.sprite = sprite;
         }
 
-        private void Apply(Sprite characterSprite, Sprite[] emojiPool)
-        {
-            if (mission == null) return;
-            if (characterImage != null && characterSprite != null) characterImage.sprite = characterSprite;
-            PlayEmojiPop(PickRandom(emojiPool));
-        }
+        public void PlayHappyBurst() => PlayRandomParticle(happyParticles);
+        public void PlaySadBurst() => PlayRandomParticle(sadParticles);
 
-        private Sprite PickRandom(Sprite[] pool)
+        private void PlayRandomParticle(ParticleSystem[] pool)
         {
-            if (pool == null || pool.Length == 0) return null;
-            return pool[Random.Range(0, pool.Length)];
-        }
-
-        private void PlayEmojiPop(Sprite sprite)
-        {
-            if (emojiImage == null || sprite == null) return;
-            emojiImage.sprite = sprite;
-            emojiImage.gameObject.SetActive(true);
-            emojiImage.rectTransform.localScale = Vector3.zero;
-
-            emojiSequence?.Kill();
-            emojiSequence = DOTween.Sequence();
-            emojiSequence.Append(emojiImage.rectTransform.DOScale(1f, popInDuration).SetEase(Ease.OutBack));
-            emojiSequence.AppendInterval(holdDuration);
-            emojiSequence.Append(emojiImage.rectTransform.DOScale(0f, popOutDuration).SetEase(Ease.InBack));
-            emojiSequence.OnComplete(() => emojiImage.gameObject.SetActive(false));
-        }
-
-        private void OnDestroy()
-        {
-            emojiSequence?.Kill();
-            StopRevert();
+            if (pool == null || pool.Length == 0) return;
+            var chosen = pool[Random.Range(0, pool.Length)];
+            if (chosen == null) return;
+            // Restart cleanly even if it's still finishing a previous burst.
+            chosen.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            chosen.Play();
         }
     }
 }

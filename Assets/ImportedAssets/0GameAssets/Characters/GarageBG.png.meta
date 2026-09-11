@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: a257b3d69bcecc44bbfccb41b5d420a7
+guid: d6b236998c89dd049ba60e469c2ef8bf
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 359642876110910573
-    second: Frame 1171276660_0
+      213: 7192220125810133557
+    second: GarageBG_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +52,7 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
-  spriteBorder: {x: 115, y: 105, z: 115, w: 105}
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 2048
+    maxTextureSize: 1024
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -126,23 +126,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Frame 1171276660_0
+      name: GarageBG_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1000
-        height: 230
+        width: 1920
+        height: 1080
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d6437945a45bdf400800000000000000
-      internalID: 359642876110910573
+      spriteID: 53a04513916efc360800000000000000
+      internalID: 7192220125810133557
       vertices: []
       indices: 
       edges: []
@@ -152,7 +152,7 @@ TextureImporter:
     physicsShape: []
     bones: []
     spriteID: 5e97eb03825dee720800000000000000
-    internalID: 1537655665
+    internalID: 0
     vertices: []
     indices: 
     edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Frame 1171276660_0: 359642876110910573
+      GarageBG_0: 7192220125810133557
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

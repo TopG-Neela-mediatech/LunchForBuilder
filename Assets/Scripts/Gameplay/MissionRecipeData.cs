@@ -48,12 +48,6 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private Sprite sadCharacterSprite;
         [Tooltip("Shown once the recipe is complete.")]
         [SerializeField] private Sprite happyCharacterSprite;
-        [Tooltip("One is picked at random and popped above the character's head whenever the Hungry state shows.")]
-        [SerializeField] private Sprite[] hungryEmojis;
-        [Tooltip("One is picked at random and popped above the character's head whenever the Sad state shows.")]
-        [SerializeField] private Sprite[] sadEmojis;
-        [Tooltip("One is picked at random and popped above the character's head whenever the Happy state shows.")]
-        [SerializeField] private Sprite[] happyEmojis;
 
         [Header("Timer")]
         [Tooltip("How long the player has to finish this recipe once the level-start animation finishes, in seconds.")]
@@ -71,9 +65,6 @@ namespace tmkoc.lunchforbuilders
         public Sprite HungryCharacterSprite => hungryCharacterSprite;
         public Sprite SadCharacterSprite => sadCharacterSprite;
         public Sprite HappyCharacterSprite => happyCharacterSprite;
-        public Sprite[] HungryEmojis => hungryEmojis;
-        public Sprite[] SadEmojis => sadEmojis;
-        public Sprite[] HappyEmojis => happyEmojis;
         public float TimeInSeconds => timeInSeconds;
     }
 }

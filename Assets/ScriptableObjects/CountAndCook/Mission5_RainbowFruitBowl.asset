@@ -46,3 +46,7 @@ MonoBehaviour:
   startingIngredients: []
   memoryRevealSeconds: 5
   peekRevealSeconds: 3
+  hungryCharacterSprite: {fileID: 21300000, guid: 60ceac2f56d9f764d9b87632af960b2b, type: 3}
+  sadCharacterSprite: {fileID: 21300000, guid: 933a004153c273b4492c8bf13bb970bd, type: 3}
+  happyCharacterSprite: {fileID: 21300000, guid: 8e36e760a5d36ca4cad2b0b26cf50ac3, type: 3}
+  timeInSeconds: 60
