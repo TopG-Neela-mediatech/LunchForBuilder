@@ -60,6 +60,8 @@ namespace tmkoc.lunchforbuilders
         // main PlaySchool app, hand off to ITS end-of-game panel instead of showing our own.
         private void OnMissionComplete(int missionIndex)
         {
+            // The mission that was just finished -- captured before currentLevelIndex advances past it.
+            MissionRecipeData completedMission = missions[missionIndex];
             currentLevelIndex = missionIndex + 1;
             HelperGameCategoryDataSaver.LevelCompleted(currentLevelIndex);
 
@@ -69,17 +71,17 @@ namespace tmkoc.lunchforbuilders
                 EffectParticleControll.Instance.SpawnGameEndPanel();
                 GameOverEndPanel.Instance.AddTheListnerRetryGame();
 #else
-                GameManager.Instance.EndPanelScript.ShowWin();
+                GameManager.Instance.EndPanelScript.ShowWin(completedMission);
 #endif
                 return;
             }
-            GameManager.Instance.EndPanelScript.ShowWin();
+            GameManager.Instance.EndPanelScript.ShowWin(completedMission);
         }
         // Fired by CookingManager's timer running out -- currentLevelIndex is left untouched (this
         // mission wasn't completed), so RetryCurrentLevel() below restarts the exact same recipe.
         private void OnLevelLose()
         {
-            GameManager.Instance.EndPanelScript.ShowLose();
+            GameManager.Instance.EndPanelScript.ShowLose(missions[currentLevelIndex]);
         }
         private void SetDataSaver()
         {

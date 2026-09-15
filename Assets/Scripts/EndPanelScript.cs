@@ -12,6 +12,8 @@ namespace tmkoc.lunchforbuilders
         [Header("References")]
         [SerializeField] private Image winChrachterImage;
         [SerializeField] private Image loseChrachterImage;
+        [SerializeField] private Image winCommonImage;
+        [SerializeField] private Image loseCommonImage;
         [SerializeField] private RectTransform winPanel;
         [SerializeField] private RectTransform losePanel;
         [SerializeField] private Button retryButton;
@@ -61,19 +63,25 @@ namespace tmkoc.lunchforbuilders
         }
 
         // Public API
-        public void ShowWin()
+        public void ShowWin(MissionRecipeData mission)
         {
             Show(winPanel, nextButton);
-         //S   Sprite winSprite = GameManager.Instance.LevelManager.CurrentLevelData.winPanelSprite;
-          //  winChrachterImage.sprite = winSprite;
+            if (mission != null)
+            {
+                if (winChrachterImage != null) winChrachterImage.sprite = mission.HappyCharacterSprite;
+                if (winCommonImage != null) winCommonImage.sprite = mission.CompletedRecipeSprite;
+            }
             RotateRaysLoop(winRaysT, 8f, true);
         }
 
-        public void ShowLose()
+        public void ShowLose(MissionRecipeData mission)
         {
             Show(losePanel, retryButton);
-       //     Sprite loseSprite = GameManager.Instance.LevelManager.CurrentLevelData.losePanelSprite;
-          //  loseChrachterImage.sprite = loseSprite;
+            if (mission != null)
+            {
+                if (loseChrachterImage != null) loseChrachterImage.sprite = mission.SadCharacterSprite;
+                if (loseCommonImage != null) loseCommonImage.sprite = mission.StationIcon;
+            }
             RotateRaysLoop(loseRaysT, 8f, false);
         }
 

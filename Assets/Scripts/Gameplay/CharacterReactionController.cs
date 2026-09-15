@@ -12,6 +12,11 @@ namespace tmkoc.lunchforbuilders
     {
         [SerializeField] private Image characterImage;
 
+        // Lets CookingManager fold the character into the same off-screen-slide-in intro
+        // choreography as the Recipe Card / Preparation Station, reusing the one Image reference
+        // already wired here rather than needing a second RectTransform field.
+        public RectTransform ImageRectTransform => characterImage != null ? characterImage.rectTransform : null;
+
         [Header("Reaction Particles")]
         [Tooltip("One is picked at random and played for every correct action, and once the recipe is complete.")]
         [SerializeField] private ParticleSystem[] happyParticles;

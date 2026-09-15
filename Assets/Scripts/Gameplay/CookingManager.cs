@@ -64,9 +64,11 @@ namespace tmkoc.lunchforbuilders
         private bool hasCompletedThisMission;
 
         private RectTransform recipeCardRect;
+        private RectTransform characterRect;
         private RectTransform canvasRect;
         private Vector2 recipeCardRestPos;
         private Vector2 stationRestPos;
+        private Vector2 characterRestPos;
         private Coroutine introRoutine;
         private Coroutine timerRoutine;
         private Coroutine idleParticleRoutine;
@@ -87,8 +89,10 @@ namespace tmkoc.lunchforbuilders
             // every later reveal computes its off-screen start from these, never from wherever the
             // element happens to be mid-animation.
             recipeCardRect = recipeCard != null ? recipeCard.GetComponent<RectTransform>() : null;
+            characterRect = characterReaction != null ? characterReaction.ImageRectTransform : null;
             canvasRect = station.ContentAnchor.GetComponentInParent<Canvas>()?.GetComponent<RectTransform>();
             if (recipeCardRect != null) recipeCardRestPos = recipeCardRect.anchoredPosition;
+            if (characterRect != null) characterRestPos = characterRect.anchoredPosition;
             stationRestPos = station.ContentAnchor.anchoredPosition;
         }
 
@@ -128,6 +132,16 @@ namespace tmkoc.lunchforbuilders
             characterReaction?.Setup(currentMission);
             UpdatePantryVisibility();
 
+            // Character moves off-screen and gets its new sprite BEFORE anything is visible again --
+            // previously the sprite only swapped at the very end of this routine, so the player saw
+            // the previous mission's portrait sitting there for the whole intro before it popped.
+            if (characterRect != null)
+            {
+                characterRect.DOKill();
+                characterRect.anchoredPosition = GetOffscreenLeftPos(characterRect, characterRestPos);
+            }
+            characterReaction?.SetSprite(CharacterMood.Hungry);
+
             foreach (var slot in pantrySlots)
             {
                 slot.SetInteractable(false);
@@ -142,6 +156,10 @@ namespace tmkoc.lunchforbuilders
                 recipeCardRect.anchoredPosition = GetOffscreenLeftPos(recipeCardRect, recipeCardRestPos);
                 recipeCardRect.DOAnchorPosX(recipeCardRestPos.x, introSlideDuration).SetEase(Ease.OutBack);
             }
+            if (characterRect != null)
+            {
+                characterRect.DOAnchorPosX(characterRestPos.x, introSlideDuration).SetEase(Ease.OutBack);
+            }
             // X stays wherever it was set in the editor; only Y is per-mission (different container
             // art -- jug vs plate vs blender -- can sit at a different height).
             Vector2 stationTargetPos = new Vector2(stationRestPos.x, currentMission.ContentAnchorRestY);
@@ -153,7 +171,6 @@ namespace tmkoc.lunchforbuilders
             yield return RevealPantrySlotsRoutine();
 
             UpdatePantryInteractivity();
-            characterReaction?.SetSprite(CharacterMood.Hungry);
             characterReaction?.PlaySadBurst();
             StartTimer();
             RestartIdleParticleTimer();
