@@ -40,14 +40,10 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private float draggableScaleInDuration = 0.3f;
 
         [Header("Character Mood")]
-        [Tooltip("Recipe progress fraction (0-1) at which the character's base mood becomes Happy, unless time is already running low.")]
-        [SerializeField] private float happyProgressFraction = 0.5f;
-        [Tooltip("Fraction of the mission's time remaining below which the character's base mood becomes Sad, overriding a progress-based Happy.")]
-        [SerializeField] private float lowTimeFraction = 0.25f;
-        [Tooltip("How long an incorrect drag's Sad reaction stays up before reverting to the current base mood.")]
-        [SerializeField] private float sadOverrideDuration = 1.5f;
         [Tooltip("How long the player can go without touching anything before a Sad particle burst nudges them -- repeats for as long as they stay idle.")]
         [SerializeField] private float idleParticleDelay = 6f;
+        [Tooltip("How long the player can go without touching anything before the character's sprite reverts to Hungry.")]
+        [SerializeField] private float idleSpriteRevertDelay = 3f;
 
         private MissionRecipeData currentMission;
         private int currentMissionIndex;
@@ -72,13 +68,10 @@ namespace tmkoc.lunchforbuilders
         private Coroutine introRoutine;
         private Coroutine timerRoutine;
         private Coroutine idleParticleRoutine;
-        private Coroutine sadOverrideRoutine;
-        // The character's mood absent any temporary override -- driven continuously by recipe
-        // progress and time remaining, re-evaluated after every drop and every timer tick.
-        private CharacterMood currentBaseMood;
-        private bool isShowingTemporarySad;
-        private float lastProgressFraction;
-        private float timeRemainingFraction = 1f;
+        private Coroutine idleSpriteRevertRoutine;
+        // Which of PreparationStation's 3 boundary RectTransforms the current mission's ingredients
+        // get parented into -- resolved once per mission start from MissionRecipeData.ContainerBoundary.
+        private RectTransform activeContainerBoundary;
 
         private void Awake()
         {
@@ -105,10 +98,7 @@ namespace tmkoc.lunchforbuilders
             hasCompletedThisMission = false;
             StopTimer();
             StopIdleParticleTimer();
-            StopSadOverride();
-            currentBaseMood = CharacterMood.Hungry;
-            lastProgressFraction = 0f;
-            timeRemainingFraction = 1f;
+            StopIdleSpriteRevertTimer();
 
             if (gameplayRoot != null) gameplayRoot.SetActive(true);
 
@@ -127,6 +117,8 @@ namespace tmkoc.lunchforbuilders
             // moment it slides or scales into view.
             station.Clear();
             station.SetContentSprite(currentMission.StationIcon);
+            station.SetContentAnchorSize(currentMission.ContentAnchorSize);
+            activeContainerBoundary = station.GetBoundary(currentMission.ContainerBoundary);
             SeedStartingIngredients();
             recipeCard?.Setup(currentMission);
             characterReaction?.Setup(currentMission);
@@ -158,6 +150,9 @@ namespace tmkoc.lunchforbuilders
             }
             if (characterRect != null)
             {
+                // Kill again -- SetSprite(Hungry) just above triggered its own subtle shake tween on
+                // this same RectTransform, which would otherwise fight the slide-in below.
+                characterRect.DOKill();
                 characterRect.DOAnchorPosX(characterRestPos.x, introSlideDuration).SetEase(Ease.OutBack);
             }
             // X stays wherever it was set in the editor; only Y is per-mission (different container
@@ -172,8 +167,10 @@ namespace tmkoc.lunchforbuilders
 
             UpdatePantryInteractivity();
             characterReaction?.PlaySadBurst();
+            gameManager.SoundManager?.PlayMissionIntro(currentMissionIndex);
             StartTimer();
             RestartIdleParticleTimer();
+            RestartIdleSpriteRevertTimer();
             RaiseProgress();
 
             gameManager.InvokeMissionStarted(currentMissionIndex);
@@ -197,19 +194,18 @@ namespace tmkoc.lunchforbuilders
 
         private IEnumerator TimerRoutine()
         {
-            float total = Mathf.Max(currentMission.TimeInSeconds, 0.01f);
             float remaining = currentMission.TimeInSeconds;
-            timeRemainingFraction = 1f;
             UpdateTimerText(remaining);
             while (remaining > 0f)
             {
                 yield return null;
                 remaining -= Time.deltaTime;
-                timeRemainingFraction = Mathf.Clamp01(remaining / total);
                 UpdateTimerText(remaining);
-                RecomputeBaseMood();
             }
             timerRoutine = null;
+            // Fires the instant time runs out -- LevelManager reacts to InvokeLevelLose() by showing
+            // the lose panel right away too, so this and the panel appear together, no delay.
+            gameManager.SoundManager?.PlayMissionLose(currentMissionIndex);
             gameManager.InvokeLevelLose();
         }
 
@@ -243,53 +239,33 @@ namespace tmkoc.lunchforbuilders
             {
                 yield return new WaitForSeconds(idleParticleDelay);
                 characterReaction?.PlaySadBurst();
+                gameManager.SoundManager?.PlayIdleNudge();
             }
         }
 
-        // The character's persistent mood -- time pressure takes priority over progress-based
-        // happiness (running low on time matters more than "halfway done"). Skipped while a wrong
-        // drag's temporary Sad override is still showing, so it doesn't get stomped mid-reaction.
-        private void RecomputeBaseMood()
+        // Reverts the character sprite to Hungry after a few seconds of no interaction -- separate
+        // from the (longer, repeating) idle particle nudge above. One-shot: once it fires the
+        // sprite just stays Hungry, no need to keep re-firing while still idle.
+        private void RestartIdleSpriteRevertTimer()
         {
-            if (currentMission == null) return;
-
-            CharacterMood mood;
-            if (timeRemainingFraction <= lowTimeFraction) mood = CharacterMood.Sad;
-            else if (lastProgressFraction >= happyProgressFraction) mood = CharacterMood.Happy;
-            else mood = CharacterMood.Hungry;
-
-            if (mood == currentBaseMood) return;
-            currentBaseMood = mood;
-            if (!isShowingTemporarySad) characterReaction?.SetSprite(mood);
+            StopIdleSpriteRevertTimer();
+            idleSpriteRevertRoutine = StartCoroutine(IdleSpriteRevertRoutine());
         }
 
-        // A wrong drag always shows Sad immediately regardless of the current base mood, then
-        // reverts back to whatever that base mood currently is (not hardcoded to Hungry) once the
-        // override window ends.
-        private void ShowTemporarySad()
+        private void StopIdleSpriteRevertTimer()
         {
-            if (sadOverrideRoutine != null) StopCoroutine(sadOverrideRoutine);
-            isShowingTemporarySad = true;
-            characterReaction?.SetSprite(CharacterMood.Sad);
-            sadOverrideRoutine = StartCoroutine(RevertTemporarySadRoutine());
-        }
-
-        private IEnumerator RevertTemporarySadRoutine()
-        {
-            yield return new WaitForSeconds(sadOverrideDuration);
-            sadOverrideRoutine = null;
-            isShowingTemporarySad = false;
-            characterReaction?.SetSprite(currentBaseMood);
-        }
-
-        private void StopSadOverride()
-        {
-            if (sadOverrideRoutine != null)
+            if (idleSpriteRevertRoutine != null)
             {
-                StopCoroutine(sadOverrideRoutine);
-                sadOverrideRoutine = null;
+                StopCoroutine(idleSpriteRevertRoutine);
+                idleSpriteRevertRoutine = null;
             }
-            isShowingTemporarySad = false;
+        }
+
+        private IEnumerator IdleSpriteRevertRoutine()
+        {
+            yield return new WaitForSeconds(idleSpriteRevertDelay);
+            idleSpriteRevertRoutine = null;
+            characterReaction?.SetSprite(CharacterMood.Hungry);
         }
 
         private IEnumerator RevealPantrySlotsRoutine()
@@ -334,7 +310,7 @@ namespace tmkoc.lunchforbuilders
                 {
                     var token = slot.SpawnPlacedToken(this, dragLayer);
                     if (token == null) continue;
-                    token.PlaceInstantly(station.ContentAnchor);
+                    token.PlaceInstantly(activeContainerBoundary);
                     station.RegisterPlaced(starting.ingredientId, token);
                 }
             }
@@ -343,11 +319,14 @@ namespace tmkoc.lunchforbuilders
         // The instant the player touches ANYTHING, the current hint hand is dismissed -- a fresh one
         // (pointed at whatever the new next-correct-action is) gets scheduled the next time
         // RefreshTutorialHint runs, which happens right after this interaction resolves. Also counts
-        // as "not idle", so the idle Sad-particle nudge waits out a fresh idleParticleDelay from here.
+        // as "not idle", so both idle timers (the Sad-particle nudge and the sprite-revert-to-Hungry)
+        // wait out a fresh delay from here.
         public void NotifyInteractionStarted(IngredientController token)
         {
             gameManager.TutorialManager?.CancelHint();
+            gameManager.SoundManager?.PlayIngredientName(token.IngredientId);
             RestartIdleParticleTimer();
+            RestartIdleSpriteRevertTimer();
         }
 
         public void UpdateHoverFeedback(IngredientController token, PointerEventData eventData)
@@ -370,11 +349,19 @@ namespace tmkoc.lunchforbuilders
                 ? ResolveAdd(token, overStation)
                 : ResolveRemove(token, overStation);
 
-            if (success) characterReaction?.PlayHappyBurst();
+            if (success)
+            {
+                characterReaction?.SetSprite(CharacterMood.Happy);
+                characterReaction?.PlayHappyBurst();
+                gameManager.SoundManager?.PlaySFX(sfxEnum.Correct);
+                gameManager.SoundManager?.PlayCorrectReinforcement();
+            }
             else
             {
+                characterReaction?.SetSprite(CharacterMood.Sad);
                 characterReaction?.PlaySadBurst();
-                ShowTemporarySad();
+                gameManager.SoundManager?.PlaySFX(sfxEnum.Incorrect);
+                gameManager.SoundManager?.PlayIncorrectReinforcement();
             }
 
             gameManager.InvokeIngredientResolved(token.IngredientId, success);
@@ -388,7 +375,7 @@ namespace tmkoc.lunchforbuilders
             if (success)
             {
                 station.RegisterPlaced(token.IngredientId, token);
-                token.SnapIntoStation(station.ContentAnchor);
+                token.SnapIntoStation(activeContainerBoundary);
                 AdvanceSequenceIfStepComplete(requirement);
                 RaiseProgress();
             }
@@ -499,7 +486,6 @@ namespace tmkoc.lunchforbuilders
                 recipeCard?.UpdateRow(i, current, req.requiredCount);
             }
             gameManager.InvokeRecipeProgress(placedTotal, requiredTotal);
-            lastProgressFraction = requiredTotal > 0 ? (float)placedTotal / requiredTotal : 0f;
 
             // Completion is automatic now -- the instant every requirement is satisfied, serve the
             // dish and end the level, no button press needed. Guarded so it only fires once even
@@ -511,7 +497,6 @@ namespace tmkoc.lunchforbuilders
                 return;
             }
 
-            RecomputeBaseMood();
             RefreshTutorialHint();
         }
 
@@ -521,9 +506,8 @@ namespace tmkoc.lunchforbuilders
         {
             StopTimer();
             StopIdleParticleTimer();
-            StopSadOverride();
+            StopIdleSpriteRevertTimer();
             gameManager.TutorialManager?.CancelHint();
-            currentBaseMood = CharacterMood.Happy;
             characterReaction?.SetSprite(CharacterMood.Happy);
             characterReaction?.PlayHappyBurst();
             station.SetContentSprite(currentMission.CompletedRecipeSprite);
@@ -585,12 +569,15 @@ namespace tmkoc.lunchforbuilders
             return true;
         }
 
-        // Holds on the gratification beat, then reports the mission done -- LevelManager reacts by
-        // showing the existing win panel (EndPanelScript.ShowWin()) as the "Mission Complete" beat,
-        // whether this was mission 1 or mission 5.
+        // Plays the outro line ("Yay! The ... is ready!") and waits for it to actually finish before
+        // reporting the mission done -- LevelManager reacts to that by showing the existing win panel
+        // (EndPanelScript.ShowWin()), so the panel only pops up once the line has played out, whether
+        // this was mission 1 or mission 5. serveCompleteDelay is still the floor if the line fails to
+        // load (PlayMissionOutro returning -1).
         private IEnumerator ServeCompleteRoutine()
         {
-            yield return new WaitForSeconds(serveCompleteDelay);
+            float len = gameManager.SoundManager != null ? gameManager.SoundManager.PlayMissionOutro(currentMissionIndex) : -1f;
+            yield return new WaitForSeconds(Mathf.Max(len, serveCompleteDelay));
             gameManager.InvokeMissionComplete(currentMissionIndex);
         }
 

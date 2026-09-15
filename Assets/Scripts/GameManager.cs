@@ -8,6 +8,7 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private LevelManager levelManager;
         [SerializeField] private EndPanelScript endPanelScript;
         [SerializeField] private TutorialManager tutorialManager;
+        [SerializeField] private SoundManager soundManager;
         private static GameManager instance;
 
 
@@ -15,6 +16,7 @@ namespace tmkoc.lunchforbuilders
         public LevelManager LevelManager { get { return levelManager; } }
         public EndPanelScript EndPanelScript { get { return endPanelScript; } }
         public TutorialManager TutorialManager { get { return tutorialManager; } }
+        public SoundManager SoundManager { get { return soundManager; } }
      
       
         private void Awake()

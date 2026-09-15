@@ -17,6 +17,12 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("Where placed tokens are anchored/parented once they snap in.")]
         [SerializeField] private RectTransform contentAnchor;
 
+        [Header("Container Boundaries")]
+        [Tooltip("Already children of Content Anchor, each sized/positioned to match one container shape's actual visible bounds. Ingredients are parented into and confined within whichever one the current mission selects (MissionRecipeData.ContainerBoundary).")]
+        [SerializeField] private RectTransform plateBoundary;
+        [SerializeField] private RectTransform strawberryLemonadeBoundary;
+        [SerializeField] private RectTransform orangeMangoJuiceBoundary;
+
         [Header("Feedback")]
         [SerializeField] private Image glowImage;
         [SerializeField] private Color idleGlowColor = Color.white;
@@ -27,6 +33,16 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private Image contentImage;
         public RectTransform DropArea => dropArea;
         public RectTransform ContentAnchor => contentAnchor;
+
+        public RectTransform GetBoundary(ContainerBoundary boundary)
+        {
+            switch (boundary)
+            {
+                case ContainerBoundary.StrawberryLemonade: return strawberryLemonadeBoundary;
+                case ContainerBoundary.OrangeMangoJuice: return orangeMangoJuiceBoundary;
+                default: return plateBoundary;
+            }
+        }
         // Same fallback as ContainsScreenPoint -- wherever a real drop is actually tested against is
         // also where a drag hint should visually land.
         public RectTransform HintTargetArea => contentImage != null ? contentImage.rectTransform : dropArea;
@@ -86,6 +102,13 @@ namespace tmkoc.lunchforbuilders
         public void SetContentSprite(Sprite sprite)
         {
             if (contentImage != null) contentImage.sprite = sprite;
+        }
+
+        // Resizes the content anchor itself to match this mission's container art -- purely
+        // visual/layout, unrelated to the boundary RectTransforms ingredients actually place within.
+        public void SetContentAnchorSize(Vector2 size)
+        {
+            if (contentAnchor != null) contentAnchor.sizeDelta = size;
         }
 
         // Hides every currently-placed ingredient token -- used the moment the recipe completes and

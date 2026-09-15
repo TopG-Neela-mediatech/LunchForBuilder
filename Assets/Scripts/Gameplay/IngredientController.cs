@@ -33,8 +33,6 @@ namespace tmkoc.lunchforbuilders
         [Header("Stacking (successful placement)")]
         [Tooltip("Final scale once resting inside the station -- smaller than a dragged token so a handful of them can visibly pile up without dominating the container.")]
         [SerializeField] private float stackedScale = 0.55f;
-        [Tooltip("Max random offset from the content anchor's center for a landed token, so placed ingredients pile up messily instead of stacking in an exact tower.")]
-        [SerializeField] private float stackRandomRadius = 40f;
         [Tooltip("Phase 1 of landing: rising to the rim of the container, partway shrunk.")]
         [SerializeField] private float dropToRimDuration = 0.15f;
         [Tooltip("How far above the content anchor's center the 'rim' of phase 1 sits.")]
@@ -108,7 +106,7 @@ namespace tmkoc.lunchforbuilders
         // without the fall animation, so the starting pile reads consistently with ones added later.
         public void PlaceInstantly(RectTransform stationAnchor)
         {
-            Vector2 stackedOffset = UnityEngine.Random.insideUnitCircle * stackRandomRadius;
+            Vector2 stackedOffset = RandomStackOffset(stationAnchor);
             restParent = stationAnchor;
             rectTransform.SetParent(stationAnchor, false);
             rectTransform.anchoredPosition = stackedOffset;
@@ -169,7 +167,7 @@ namespace tmkoc.lunchforbuilders
             isLocked = true;
             Vector2 anchorLocalPos = ToLocalAnchoredPos(stationAnchor, dragLayer);
             Vector2 rimPos = anchorLocalPos + new Vector2(0f, rimHeightOffset);
-            Vector2 stackedOffset = UnityEngine.Random.insideUnitCircle * stackRandomRadius;
+            Vector2 stackedOffset = RandomStackOffset(stationAnchor);
             Vector2 landedPos = anchorLocalPos + stackedOffset;
             float rimScale = (1f + stackedScale) * 0.5f;
 
@@ -234,6 +232,18 @@ namespace tmkoc.lunchforbuilders
         {
             Vector3 local = parent.InverseTransformPoint(target.position);
             return new Vector2(local.x, local.y);
+        }
+
+        // A random point inside stationAnchor's own rect -- stationAnchor is one of Preparation
+        // Station's dedicated boundary RectTransforms (Plate / StrawberryLemonade /
+        // OrangeMangoJuice), sized and positioned in the scene to match that container's actual
+        // visible bounds, so this never needs a separately-tuned size value.
+        private Vector2 RandomStackOffset(RectTransform stationAnchor)
+        {
+            Vector2 size = stationAnchor.rect.size;
+            return new Vector2(
+                UnityEngine.Random.Range(-size.x * 0.5f, size.x * 0.5f),
+                UnityEngine.Random.Range(-size.y * 0.5f, size.y * 0.5f));
         }
     }
 }

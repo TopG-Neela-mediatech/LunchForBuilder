@@ -15,7 +15,8 @@ MonoBehaviour:
   dishName: Orange Mango Juice
   stationIcon: {fileID: 21300000, guid: 6faab7df9808fe1488e3694c6e300cc2, type: 3}
   completedRecipeSprite: {fileID: 21300000, guid: 764448673ec31e54ab624ca40aff95b3, type: 3}
-  contentAnchorRestY: 250
+  contentAnchorRestY: 0
+  contentAnchorSize: {x: 300, y: 300}
   learningRule: 3
   requirements:
   - ingredientId: OrangeSlice

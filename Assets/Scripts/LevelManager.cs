@@ -68,6 +68,7 @@ namespace tmkoc.lunchforbuilders
             if (currentLevelIndex >= missions.Length)
             {
 #if PLAYSCHOOL_MAIN
+                GameManager.Instance.SoundManager?.PlayFinalOutro();
                 EffectParticleControll.Instance.SpawnGameEndPanel();
                 GameOverEndPanel.Instance.AddTheListnerRetryGame();
 #else

@@ -5,6 +5,11 @@ namespace tmkoc.lunchforbuilders
 {
     public enum LearningRule { UniformCounting, DifferentQuantities, OrderAndCounting, SubtractionByRemoval, Memory }
 
+    // Which of PreparationStation's 3 fixed boundary RectTransforms this mission's ingredients get
+    // parented into and confined within -- Plate covers Salad/Sandwich/Fruit Bowl, the other two are
+    // one each for the two jug-shaped missions.
+    public enum ContainerBoundary { Plate, StrawberryLemonade, OrangeMangoJuice }
+
     // One entry per ingredient row on the Recipe Card. sequenceOrder is only meaningful for
     // OrderAndCounting missions (Mission 3, "Order + Counting") -- everywhere else it stays -1,
     // meaning the ingredient can be added at any time.
@@ -31,6 +36,10 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private Sprite completedRecipeSprite;
         [Tooltip("The Preparation Station content anchor's resting Y position (anchoredPosition.y) once this mission's intro slide-in finishes. Different container art (jug vs plate vs blender) can sit at a different height, so this is set per mission rather than shared.")]
         [SerializeField] private float contentAnchorRestY;
+        [Tooltip("The Preparation Station content anchor gets resized (sizeDelta) to this at mission start. Purely visual/layout.")]
+        [SerializeField] private Vector2 contentAnchorSize = new Vector2(80f, 80f);
+        [Tooltip("Which of the Preparation Station's 3 boundary RectTransforms this mission's ingredients are parented into and confined within.")]
+        [SerializeField] private ContainerBoundary containerBoundary;
         [SerializeField] private LearningRule learningRule;
         [Tooltip("What the player must add/remove to complete this dish.")]
         [SerializeField] private IngredientRequirement[] requirements;
@@ -57,6 +66,8 @@ namespace tmkoc.lunchforbuilders
         public Sprite StationIcon => stationIcon;
         public Sprite CompletedRecipeSprite => completedRecipeSprite;
         public float ContentAnchorRestY => contentAnchorRestY;
+        public Vector2 ContentAnchorSize => contentAnchorSize;
+        public ContainerBoundary ContainerBoundary => containerBoundary;
         public LearningRule LearningRule => learningRule;
         public IngredientRequirement[] Requirements => requirements;
         public IngredientRequirement[] StartingIngredients => startingIngredients;

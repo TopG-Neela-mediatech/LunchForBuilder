@@ -15,7 +15,9 @@ MonoBehaviour:
   dishName: Rainbow Fruit Bowl
   stationIcon: {fileID: 21300000, guid: 33d02b5cbaff41d4ea67184be633dead, type: 3}
   completedRecipeSprite: {fileID: 21300000, guid: b47eb9475b6717c44bf58fab792182db, type: 3}
-  contentAnchorRestY: 50
+  contentAnchorRestY: -100
+  contentAnchorSize: {x: 300, y: 120}
+  childContentArea: {x: 175, y: 85}
   learningRule: 4
   requirements:
   - ingredientId: ApplePiece

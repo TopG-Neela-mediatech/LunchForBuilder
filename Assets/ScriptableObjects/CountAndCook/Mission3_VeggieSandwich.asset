@@ -15,7 +15,9 @@ MonoBehaviour:
   dishName: Veggie Sandwich
   stationIcon: {fileID: 21300000, guid: 33d02b5cbaff41d4ea67184be633dead, type: 3}
   completedRecipeSprite: {fileID: 21300000, guid: 981254a7a20e3e3458e0421023afaba9, type: 3}
-  contentAnchorRestY: 50
+  contentAnchorRestY: -100
+  contentAnchorSize: {x: 300, y: 120}
+  childContentArea: {x: 175, y: 85}
   learningRule: 2
   requirements:
   - ingredientId: BottomBreadSlice
