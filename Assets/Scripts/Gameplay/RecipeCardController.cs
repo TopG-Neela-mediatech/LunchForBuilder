@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +28,20 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private GameObject cardBackFace;
         [SerializeField] private Button peekButton;
 
+        [Header("Row Feedback")]
+        [Tooltip("Small punch on a row's icon every time its count actually increases.")]
+        [SerializeField] private float rowTickPunchScale = 0.15f;
+        [SerializeField] private float rowTickPunchDuration = 0.25f;
+        [Tooltip("Bigger punch + a brief colour flash the moment a row hits its target.")]
+        [SerializeField] private float rowCompletePunchScale = 0.35f;
+        [SerializeField] private float rowCompletePunchDuration = 0.4f;
+        [SerializeField] private Color rowCompleteFlashColor = new Color(0.6f, 1f, 0.6f);
+        [SerializeField] private float rowCompleteFlashDuration = 0.3f;
+
+        [Header("Card Flip")]
+        [Tooltip("Half the total flip duration -- one half shrinks the outgoing face to nothing, the other grows the incoming face back to full width.")]
+        [SerializeField] private float flipHalfDuration = 0.2f;
+
         public event Action OnPeekUsed;
 
         private MissionRecipeData mission;
@@ -36,11 +51,18 @@ namespace tmkoc.lunchforbuilders
         // been removed counting up, since that reads more clearly as "you need to take some out".
         private bool[] rowIsRemoval;
         private int[] rowStartingCount;
+        private int[] lastRowCurrent;
+
+        private RectTransform cardFrontRect;
+        private RectTransform cardBackRect;
+        private Sequence flipSequence;
 
         private void Awake()
         {
             if (peekButton != null) peekButton.onClick.AddListener(HandlePeekPressed);
             SetPeekButtonVisible(false);
+            cardFrontRect = cardFrontFace != null ? cardFrontFace.GetComponent<RectTransform>() : null;
+            cardBackRect = cardBackFace != null ? cardBackFace.GetComponent<RectTransform>() : null;
         }
 
         public void Setup(MissionRecipeData missionData)
@@ -52,6 +74,7 @@ namespace tmkoc.lunchforbuilders
             {
                 rowIsRemoval = new bool[rows.Length];
                 rowStartingCount = new int[rows.Length];
+                lastRowCurrent = new int[rows.Length];
             }
 
             var requirements = mission.Requirements;
@@ -59,10 +82,19 @@ namespace tmkoc.lunchforbuilders
             {
                 bool inUse = requirements != null && i < requirements.Length;
                 if (rows[i].icon != null) rows[i].icon.gameObject.SetActive(inUse);
+                lastRowCurrent[i] = 0;
                 if (!inUse) continue;
 
                 var req = requirements[i];
-                if (rows[i].icon != null) rows[i].icon.sprite = req.icon;
+                if (rows[i].icon != null)
+                {
+                    // Reset any flash/punch left over from the previous mission's last-completed row.
+                    rows[i].icon.DOKill();
+                    rows[i].icon.rectTransform.DOKill();
+                    rows[i].icon.rectTransform.localScale = Vector3.one;
+                    rows[i].icon.sprite = req.icon;
+                    rows[i].icon.color = Color.white;
+                }
 
                 rowIsRemoval[i] = req.isRemoval;
                 rowStartingCount[i] = req.isRemoval ? FindStartingCount(req.ingredientId) : 0;
@@ -73,7 +105,7 @@ namespace tmkoc.lunchforbuilders
                         : $"0/{req.requiredCount}";
             }
 
-            ShowFace(true);
+            ShowFace(true, animate: false);
             SetPeekButtonVisible(false);
 
             if (mission.LearningRule == LearningRule.Memory)
@@ -89,6 +121,9 @@ namespace tmkoc.lunchforbuilders
             if (index < 0 || index >= rows.Length || rows[index]?.icon == null || !rows[index].icon.gameObject.activeSelf) return;
             if (rows[index].counterText == null) return;
 
+            bool increased = lastRowCurrent != null && current > lastRowCurrent[index];
+            if (lastRowCurrent != null) lastRowCurrent[index] = current;
+
             if (rowIsRemoval != null && rowIsRemoval[index])
             {
                 int startingCount = rowStartingCount[index];
@@ -99,6 +134,30 @@ namespace tmkoc.lunchforbuilders
             else
             {
                 rows[index].counterText.text = $"{Mathf.Min(current, required)}/{required}";
+            }
+
+            if (increased) PlayRowTick(index, current >= required);
+        }
+
+        // A small punch every time a row's count ticks up, and a bigger punch + a quick green flash
+        // the moment it actually completes -- direct visual feedback tied to counting correctly.
+        private void PlayRowTick(int index, bool justCompleted)
+        {
+            var icon = rows[index].icon;
+            if (icon == null) return;
+
+            icon.rectTransform.DOKill();
+            float punch = justCompleted ? rowCompletePunchScale : rowTickPunchScale;
+            float duration = justCompleted ? rowCompletePunchDuration : rowTickPunchDuration;
+            icon.rectTransform.DOPunchScale(Vector3.one * punch, duration, 6, 0.8f);
+
+            if (justCompleted)
+            {
+                icon.DOKill();
+                Color original = icon.color;
+                DOTween.Sequence()
+                    .Append(icon.DOColor(rowCompleteFlashColor, rowCompleteFlashDuration * 0.5f))
+                    .Append(icon.DOColor(original, rowCompleteFlashDuration * 0.5f));
             }
         }
 
@@ -137,10 +196,35 @@ namespace tmkoc.lunchforbuilders
             memoryRoutine = null;
         }
 
-        private void ShowFace(bool front)
+        // Animates like an actual card flip: shrink the visible face to nothing on its own X axis,
+        // swap which face is active at that pinch-point, then grow the new face back out -- cheap
+        // and reads convincingly on a flat UI card without needing a real 3D/perspective camera.
+        // animate=false (Setup's initial reset) just snaps straight to the target face instead.
+        private void ShowFace(bool front, bool animate = true)
         {
-            if (cardFrontFace != null) cardFrontFace.SetActive(front);
-            if (cardBackFace != null) cardBackFace.SetActive(!front);
+            flipSequence?.Kill();
+
+            if (!animate)
+            {
+                if (cardFrontFace != null) { cardFrontFace.SetActive(front); if (cardFrontRect != null) cardFrontRect.localScale = Vector3.one; }
+                if (cardBackFace != null) { cardBackFace.SetActive(!front); if (cardBackRect != null) cardBackRect.localScale = Vector3.one; }
+                return;
+            }
+
+            GameObject fromFace = front ? cardBackFace : cardFrontFace;
+            RectTransform fromRect = front ? cardBackRect : cardFrontRect;
+            GameObject toFace = front ? cardFrontFace : cardBackFace;
+            RectTransform toRect = front ? cardFrontRect : cardBackRect;
+
+            flipSequence = DOTween.Sequence();
+            if (fromRect != null) flipSequence.Append(fromRect.DOScaleX(0f, flipHalfDuration).SetEase(Ease.InQuad));
+            flipSequence.AppendCallback(() =>
+            {
+                if (fromFace != null) fromFace.SetActive(false);
+                if (toFace != null) toFace.SetActive(true);
+                if (toRect != null) toRect.localScale = new Vector3(0f, 1f, 1f);
+            });
+            if (toRect != null) flipSequence.Append(toRect.DOScaleX(1f, flipHalfDuration).SetEase(Ease.OutQuad));
         }
 
         private void SetPeekButtonVisible(bool visible)
@@ -154,6 +238,10 @@ namespace tmkoc.lunchforbuilders
             memoryRoutine = null;
         }
 
-        private void OnDestroy() => StopMemoryRoutine();
+        private void OnDestroy()
+        {
+            StopMemoryRoutine();
+            flipSequence?.Kill();
+        }
     }
 }

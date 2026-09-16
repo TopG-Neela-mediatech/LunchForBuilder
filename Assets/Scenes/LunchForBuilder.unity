@@ -505,6 +505,9 @@ MonoBehaviour:
   draggableScaleInDuration: 0.3
   idleParticleDelay: 6
   idleSpriteRevertDelay: 3
+  winPunchScale: 0.25
+  winPunchDuration: 0.4
+  confettiLeadTime: 0.6
 --- !u!1001 &136128538
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -623,6 +626,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 2559037202506892817, guid: 88a59c8e316774bf68b9a81e990ede96, type: 3}
   m_PrefabInstance: {fileID: 136128538}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &136128540 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2559037202506892822, guid: 88a59c8e316774bf68b9a81e990ede96, type: 3}
+  m_PrefabInstance: {fileID: 136128538}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0ce80c06832d4a49a2a30ece9fb2df6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &172080316
 GameObject:
   m_ObjectHideFlags: 0
@@ -1787,6 +1801,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2982949185662218945, guid: 9a46c71c1b573444eb1c8b4e59cb4342, type: 3}
+      propertyPath: confettiEffect
+      value: 
+      objectReference: {fileID: 136128540}
     - target: {fileID: 2982949185662218945, guid: 9a46c71c1b573444eb1c8b4e59cb4342, type: 3}
       propertyPath: winCommonImage
       value: 

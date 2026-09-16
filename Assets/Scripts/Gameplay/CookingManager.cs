@@ -52,6 +52,13 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("How long the confetti gets to burst on screen before the win panel slides up and covers it.")]
         [SerializeField] private float confettiLeadTime = 0.6f;
 
+        [Header("Timer Urgency")]
+        [Tooltip("Once the countdown drops to/below this many seconds, the timer text pulses and turns red -- a wordless 'hurry up' cue.")]
+        [SerializeField] private float timerUrgentThreshold = 10f;
+        [SerializeField] private Color timerUrgentColor = new Color(1f, 0.3f, 0.3f);
+        [SerializeField] private float timerPulseScale = 1.15f;
+        [SerializeField] private float timerPulseDuration = 0.4f;
+
         private MissionRecipeData currentMission;
         private int currentMissionIndex;
         private int currentSequenceStep;
@@ -76,6 +83,9 @@ namespace tmkoc.lunchforbuilders
         private Coroutine timerRoutine;
         private Coroutine idleParticleRoutine;
         private Coroutine idleSpriteRevertRoutine;
+        private Tween timerPulseTween;
+        private Color timerNormalColor;
+        private bool timerUrgentActive;
         // Which of PreparationStation's 3 boundary RectTransforms the current mission's ingredients
         // get parented into -- resolved once per mission start from MissionRecipeData.ContainerBoundary.
         private RectTransform activeContainerBoundary;
@@ -94,6 +104,7 @@ namespace tmkoc.lunchforbuilders
             if (recipeCardRect != null) recipeCardRestPos = recipeCardRect.anchoredPosition;
             if (characterRect != null) characterRestPos = characterRect.anchoredPosition;
             stationRestPos = station.ContentAnchor.anchoredPosition;
+            if (timerText != null) timerNormalColor = timerText.color;
         }
 
         public void StartMission(MissionRecipeData mission, int missionIndex)
@@ -136,10 +147,10 @@ namespace tmkoc.lunchforbuilders
             // the previous mission's portrait sitting there for the whole intro before it popped.
             if (characterRect != null)
             {
-                characterRect.DOKill();
+                characterReaction?.PauseIdleBob();
                 characterRect.anchoredPosition = GetOffscreenLeftPos(characterRect, characterRestPos);
             }
-            characterReaction?.SetSprite(CharacterMood.Hungry);
+            characterReaction?.SetSpriteSilently(CharacterMood.Hungry);
 
             foreach (var slot in pantrySlots)
             {
@@ -157,10 +168,10 @@ namespace tmkoc.lunchforbuilders
             }
             if (characterRect != null)
             {
-                // Kill again -- SetSprite(Hungry) just above triggered its own subtle shake tween on
-                // this same RectTransform, which would otherwise fight the slide-in below.
-                characterRect.DOKill();
-                characterRect.DOAnchorPosX(characterRestPos.x, introSlideDuration).SetEase(Ease.OutBack);
+                // SetSpriteSilently above deliberately skips the shake, so there's nothing fighting
+                // this slide-in -- the idle bob just resumes once the character reaches rest position.
+                characterRect.DOAnchorPosX(characterRestPos.x, introSlideDuration).SetEase(Ease.OutBack)
+                    .OnComplete(() => characterReaction?.ResumeIdleBob());
             }
             // X stays wherever it was set in the editor; only Y is per-mission (different container
             // art -- jug vs plate vs blender -- can sit at a different height).
@@ -197,6 +208,34 @@ namespace tmkoc.lunchforbuilders
                 StopCoroutine(timerRoutine);
                 timerRoutine = null;
             }
+            StopTimerUrgency();
+        }
+
+        // Once the countdown crosses the urgency threshold, the text pulses red for the rest of the
+        // mission -- a continuous loop rather than a one-shot flash, so it keeps reading as "still
+        // urgent" for as long as it stays true.
+        private void StartTimerUrgency()
+        {
+            if (timerUrgentActive || timerText == null) return;
+            timerUrgentActive = true;
+            timerText.color = timerUrgentColor;
+            timerPulseTween?.Kill();
+            timerPulseTween = timerText.rectTransform
+                .DOScale(timerPulseScale, timerPulseDuration)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
+        }
+
+        private void StopTimerUrgency()
+        {
+            timerUrgentActive = false;
+            timerPulseTween?.Kill();
+            timerPulseTween = null;
+            if (timerText != null)
+            {
+                timerText.color = timerNormalColor;
+                timerText.rectTransform.localScale = Vector3.one;
+            }
         }
 
         private IEnumerator TimerRoutine()
@@ -221,6 +260,8 @@ namespace tmkoc.lunchforbuilders
             if (timerText == null) return;
             int wholeSeconds = Mathf.CeilToInt(Mathf.Max(secondsRemaining, 0f));
             timerText.text = $"{wholeSeconds / 60:00}:{wholeSeconds % 60:00}";
+
+            if (secondsRemaining <= timerUrgentThreshold) StartTimerUrgency();
         }
 
         // Repeats for as long as the player goes untouched -- reset (via NotifyInteractionStarted)
@@ -626,6 +667,7 @@ namespace tmkoc.lunchforbuilders
         private void OnDestroy()
         {
             if (recipeCard != null) recipeCard.OnPeekUsed -= HandlePeekUsed;
+            timerPulseTween?.Kill();
         }
     }
 }
