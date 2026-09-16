@@ -33,6 +33,10 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private Image contentImage;
         public RectTransform DropArea => dropArea;
         public RectTransform ContentAnchor => contentAnchor;
+        // The completed-dish sprite's own RectTransform -- used for the win celebration's
+        // positive-feedback punch-scale, separate from ContentAnchor (which holds the ingredient
+        // tokens, not the container/dish image itself).
+        public RectTransform ContentImageRectTransform => contentImage != null ? contentImage.rectTransform : null;
 
         public RectTransform GetBoundary(ContainerBoundary boundary)
         {

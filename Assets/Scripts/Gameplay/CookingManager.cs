@@ -45,6 +45,13 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("How long the player can go without touching anything before the character's sprite reverts to Hungry.")]
         [SerializeField] private float idleSpriteRevertDelay = 3f;
 
+        [Header("Win Celebration")]
+        [Tooltip("Punch-scale strength for the character portrait and the completed-dish icon, played once the outro line finishes.")]
+        [SerializeField] private float winPunchScale = 0.25f;
+        [SerializeField] private float winPunchDuration = 0.4f;
+        [Tooltip("How long the confetti gets to burst on screen before the win panel slides up and covers it.")]
+        [SerializeField] private float confettiLeadTime = 0.6f;
+
         private MissionRecipeData currentMission;
         private int currentMissionIndex;
         private int currentSequenceStep;
@@ -569,16 +576,42 @@ namespace tmkoc.lunchforbuilders
             return true;
         }
 
-        // Plays the outro line ("Yay! The ... is ready!") and waits for it to actually finish before
-        // reporting the mission done -- LevelManager reacts to that by showing the existing win panel
-        // (EndPanelScript.ShowWin()), so the panel only pops up once the line has played out, whether
-        // this was mission 1 or mission 5. serveCompleteDelay is still the floor if the line fails to
-        // load (PlayMissionOutro returning -1).
+        // The full win celebration beat, in order: outro line plays out -> a positive-feedback punch
+        // on the character and the completed dish -> confetti bursts (EndPanelScript owns the actual
+        // effect, this just triggers it) -> only THEN is the mission reported complete, which is what
+        // LevelManager reacts to by sliding up the win panel. Every step finishes before the next
+        // starts, so the panel never steals the moment from the animation/confetti.
         private IEnumerator ServeCompleteRoutine()
         {
             float len = gameManager.SoundManager != null ? gameManager.SoundManager.PlayMissionOutro(currentMissionIndex) : -1f;
             yield return new WaitForSeconds(Mathf.Max(len, serveCompleteDelay));
+
+            PlayWinPunchFeedback();
+            yield return new WaitForSeconds(winPunchDuration);
+
+            gameManager.EndPanelScript?.PlayConfetti();
+            yield return new WaitForSeconds(confettiLeadTime);
+
             gameManager.InvokeMissionComplete(currentMissionIndex);
+        }
+
+        // A little "pop" on the character portrait and the completed-dish icon -- cheap, readable
+        // positive feedback that doesn't need any new art, just a punch-scale on what's already there.
+        private void PlayWinPunchFeedback()
+        {
+            RectTransform charRect = characterReaction != null ? characterReaction.ImageRectTransform : null;
+            RectTransform contentRect = station.ContentImageRectTransform;
+
+            if (charRect != null)
+            {
+                charRect.DOKill();
+                charRect.DOPunchScale(Vector3.one * winPunchScale, winPunchDuration, 6, 0.8f);
+            }
+            if (contentRect != null)
+            {
+                contentRect.DOKill();
+                contentRect.DOPunchScale(Vector3.one * winPunchScale, winPunchDuration, 6, 0.8f);
+            }
         }
 
         private void HandlePeekUsed() => gameManager.InvokePeekUsed(currentMissionIndex);

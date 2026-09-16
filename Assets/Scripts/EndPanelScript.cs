@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System;
+using AssetKits.ParticleImage;
 
 
 namespace tmkoc.lunchforbuilders
@@ -28,7 +29,7 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private float slideOutDuration = 0.5f;
         [SerializeField] private Ease slideInEase = Ease.OutBack;
         [SerializeField] private Ease slideOutEase = Ease.InBack;
-
+        [SerializeField] private ParticleImage confettiEffect;
 
         public bool IsShowing => (winPanel != null && winPanel.gameObject.activeSelf) || (losePanel != null && losePanel.gameObject.activeSelf);
 
@@ -73,6 +74,11 @@ namespace tmkoc.lunchforbuilders
             }
             RotateRaysLoop(winRaysT, 8f, true);
         }
+
+        // Called by CookingManager as part of its win celebration beat, before it reports the
+        // mission complete (which is what actually triggers ShowWin) -- so the confetti bursts
+        // first and is already on screen by the time the panel slides up over it.
+        public void PlayConfetti() => confettiEffect?.Play();
 
         public void ShowLose(MissionRecipeData mission)
         {
