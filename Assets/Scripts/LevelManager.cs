@@ -17,6 +17,13 @@ namespace tmkoc.lunchforbuilders
         // The mission index the player is currently on -- doubles as the resume point on a fresh
         // launch and the value persisted via HelperGameCategoryDataSaver.
         public int currentLevelIndex { get; private set; }
+
+        // Tracked separately from currentLevelIndex/HelperGameCategoryDataSaver's completed-level
+        // progress -- a player who quits right after the story finishes but before completing
+        // Mission 1 still has currentLevelIndex == 0, and we don't want the story replaying on their
+        // next launch. This flag is the actual "has this device seen the intro" source of truth.
+        private const string StorySeenKey = "CountAndCook_StorySeen";
+
         private void StartLevel() => GameManager.Instance.InvokeLevelStart();
 
         // StoryController never hides its own canvas on finish/skip -- it only stops animating --
@@ -24,6 +31,8 @@ namespace tmkoc.lunchforbuilders
         private void HandleStoryFinished()
         {
             if (storyController != null) storyController.gameObject.SetActive(false);
+            PlayerPrefs.SetInt(StorySeenKey, 1);
+            PlayerPrefs.Save();
             StartLevel();
         }
 
@@ -40,15 +49,18 @@ namespace tmkoc.lunchforbuilders
             GameManager.Instance.OnMissionComplete += OnMissionComplete;
             GameManager.Instance.OnLevelLose += OnLevelLose;
 
-            // A returning player who already finished at least one mission skips straight back into
-            // gameplay -- the storyboard (broken playground, tired workers) only ever plays once.
-            if (currentLevelIndex > 0)
+            // The storyboard (broken playground, tired workers) only ever plays once per device --
+            // on every launch after that, skip straight into gameplay.
+            bool alreadySeenStory = currentLevelIndex > 0 || PlayerPrefs.GetInt(StorySeenKey, 0) == 1;
+            if (!alreadySeenStory && storyController != null)
+            {
+                storyController.gameObject.SetActive(true);
+            }
+            else
             {
                 if (storyController != null) storyController.gameObject.SetActive(false);
                 StartLevel();
             }
-            else if (storyController != null) storyController.gameObject.SetActive(true);
-            else StartLevel();
         }
         private void OnLevelStart()
         {

@@ -508,6 +508,10 @@ MonoBehaviour:
   winPunchScale: 0.25
   winPunchDuration: 0.4
   confettiLeadTime: 0.6
+  timerUrgentThreshold: 10
+  timerUrgentColor: {r: 1, g: 0.3, b: 0.3, a: 1}
+  timerPulseScale: 1.15
+  timerPulseDuration: 0.4
 --- !u!1001 &136128538
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -735,6 +739,8 @@ MonoBehaviour:
   icon: {fileID: 172080319}
   rectTransform: {fileID: 172080317}
   canvasGroup: {fileID: 172080318}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &172080321
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1039,6 +1045,8 @@ MonoBehaviour:
   icon: {fileID: 199018842}
   rectTransform: {fileID: 199018840}
   canvasGroup: {fileID: 199018841}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &199018844
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1518,6 +1526,8 @@ MonoBehaviour:
   icon: {fileID: 298727984}
   rectTransform: {fileID: 298727982}
   canvasGroup: {fileID: 298727983}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &298727986
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1761,6 +1771,8 @@ MonoBehaviour:
   icon: {fileID: 327718346}
   rectTransform: {fileID: 327718344}
   canvasGroup: {fileID: 327718345}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &327718348
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2218,6 +2230,8 @@ MonoBehaviour:
   icon: {fileID: 452937259}
   rectTransform: {fileID: 452937258}
   canvasGroup: {fileID: 452937261}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!1 &484973186
 GameObject:
   m_ObjectHideFlags: 0
@@ -2582,6 +2596,8 @@ MonoBehaviour:
   icon: {fileID: 523141326}
   rectTransform: {fileID: 523141324}
   canvasGroup: {fileID: 523141325}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &523141328
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3107,6 +3123,8 @@ MonoBehaviour:
   icon: {fileID: 674901008}
   rectTransform: {fileID: 674901006}
   canvasGroup: {fileID: 674901007}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &674901010
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3425,6 +3443,8 @@ MonoBehaviour:
   icon: {fileID: 790795425}
   rectTransform: {fileID: 790795423}
   canvasGroup: {fileID: 790795424}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &790795427
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3796,6 +3816,8 @@ MonoBehaviour:
   icon: {fileID: 833064331}
   rectTransform: {fileID: 833064329}
   canvasGroup: {fileID: 833064330}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &833064333
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4536,6 +4558,8 @@ MonoBehaviour:
   icon: {fileID: 1077959207}
   rectTransform: {fileID: 1077959205}
   canvasGroup: {fileID: 1077959206}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &1077959209
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4642,6 +4666,8 @@ MonoBehaviour:
   icon: {fileID: 1099822224}
   rectTransform: {fileID: 1099822222}
   canvasGroup: {fileID: 1099822223}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &1099822226
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4748,6 +4774,8 @@ MonoBehaviour:
   icon: {fileID: 1120470384}
   rectTransform: {fileID: 1120470382}
   canvasGroup: {fileID: 1120470383}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &1120470386
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5124,6 +5152,8 @@ MonoBehaviour:
   icon: {fileID: 1191496567}
   rectTransform: {fileID: 1191496565}
   canvasGroup: {fileID: 1191496566}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &1191496569
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5400,6 +5430,8 @@ MonoBehaviour:
   icon: {fileID: 1309999819}
   rectTransform: {fileID: 1309999817}
   canvasGroup: {fileID: 1309999818}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &1309999821
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5778,6 +5810,8 @@ MonoBehaviour:
   icon: {fileID: 1489401607}
   rectTransform: {fileID: 1489401605}
   canvasGroup: {fileID: 1489401606}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &1489401609
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5952,6 +5986,8 @@ MonoBehaviour:
   icon: {fileID: 1501750871}
   rectTransform: {fileID: 1501750869}
   canvasGroup: {fileID: 1501750870}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &1501750873
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6137,6 +6173,8 @@ MonoBehaviour:
   icon: {fileID: 1605546677}
   rectTransform: {fileID: 1605546675}
   canvasGroup: {fileID: 1605546676}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &1605546679
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -6483,6 +6521,8 @@ MonoBehaviour:
   shakeDuration: 0.25
   shakeStrength: 8
   shakeVibrato: 6
+  idleBobDistance: 6
+  idleBobDuration: 1.2
   happyParticles:
   - {fileID: 2078376731}
   - {fileID: 205772342}
@@ -6596,6 +6636,13 @@ MonoBehaviour:
   cardFrontFace: {fileID: 1896820255}
   cardBackFace: {fileID: 698881727}
   peekButton: {fileID: 1311496595}
+  rowTickPunchScale: 0.15
+  rowTickPunchDuration: 0.25
+  rowCompletePunchScale: 0.35
+  rowCompletePunchDuration: 0.4
+  rowCompleteFlashColor: {r: 0.6, g: 1, b: 0.6, a: 1}
+  rowCompleteFlashDuration: 0.3
+  flipHalfDuration: 0.2
 --- !u!1 &1718719648
 GameObject:
   m_ObjectHideFlags: 0
@@ -6769,6 +6816,8 @@ MonoBehaviour:
   icon: {fileID: 1772034986}
   rectTransform: {fileID: 1772034984}
   canvasGroup: {fileID: 1772034985}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &1772034988
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7348,6 +7397,8 @@ MonoBehaviour:
   icon: {fileID: 2009677798}
   rectTransform: {fileID: 2009677796}
   canvasGroup: {fileID: 2009677797}
+  pulseScale: 1.06
+  pulseDuration: 0.9
 --- !u!222 &2009677800
 CanvasRenderer:
   m_ObjectHideFlags: 0

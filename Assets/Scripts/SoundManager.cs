@@ -43,7 +43,7 @@ namespace tmkoc.lunchforbuilders
         public float PlayStorySlide(int slideIndex)
         {
             if (audioMapper.storySlides == null || slideIndex < 0 || slideIndex >= audioMapper.storySlides.Length) return -1f;
-            return RuntimeAudioLoader.Instance.PlayRuntimeAudio(audioMapper.storySlides[slideIndex]);
+            return RuntimeAudioLoader.Instance != null ? RuntimeAudioLoader.Instance.PlayRuntimeAudio(audioMapper.storySlides[slideIndex]) : -1f;
         }
 
         // ---- Per-mission intro ("Let's make some Strawberry Lemon Water!") ----
@@ -60,13 +60,13 @@ namespace tmkoc.lunchforbuilders
 
         // ---- Final game outro (whole game complete) -- only reachable in the PLAYSCHOOL_MAIN
         // build path, right before handing off to the main app's own end-of-game panel. ----
-        public float PlayFinalOutro() => RuntimeAudioLoader.Instance.PlayRuntimeAudio(audioMapper.finalOutro);
+        public float PlayFinalOutro() => RuntimeAudioLoader.Instance != null ? RuntimeAudioLoader.Instance.PlayRuntimeAudio(audioMapper.finalOutro) : -1f;
 
         // ---- Ingredient name callout ("Ice Cube!", "Lemon Slice!" ...) -- played the instant the
         // player picks up (starts dragging) any ingredient, add or remove alike. ----
         public float PlayIngredientName(string ingredientId)
         {
-            if (audioMapper.ingredientNames == null) return -1f;
+            if (audioMapper.ingredientNames == null || RuntimeAudioLoader.Instance == null) return -1f;
             foreach (var entry in audioMapper.ingredientNames)
             {
                 if (entry.ingredientId == ingredientId) return RuntimeAudioLoader.Instance.PlayRuntimeAudio(entry.key);
@@ -77,7 +77,7 @@ namespace tmkoc.lunchforbuilders
         // ---- Idle nudge (random variant), repeats for as long as the player stays idle ----
         public float PlayIdleNudge()
         {
-            if (audioMapper.idleNudges == null || audioMapper.idleNudges.Length == 0) return -1f;
+            if (audioMapper.idleNudges == null || audioMapper.idleNudges.Length == 0 || RuntimeAudioLoader.Instance == null) return -1f;
             int rand = UnityEngine.Random.Range(0, audioMapper.idleNudges.Length);
             return RuntimeAudioLoader.Instance.PlayRuntimeAudio(audioMapper.idleNudges[rand]);
         }
@@ -88,13 +88,13 @@ namespace tmkoc.lunchforbuilders
         // added as new CountAndCook-specific lines. Each call's own Stop()-then-PlayOneShot on the
         // shared _commonAudioSource is what keeps every VO line (name callout, correct/incorrect,
         // idle nudge, intro/outro) from ever overlapping another. ----
-        public void PlayCorrectReinforcement() => RuntimeAudioLoader.Instance.PlayCorrectAudioClip();
-        public void PlayIncorrectReinforcement() => RuntimeAudioLoader.Instance.PlayIncorrectAudioClip();
+        public void PlayCorrectReinforcement() => RuntimeAudioLoader.Instance?.PlayCorrectAudioClip();
+        public void PlayIncorrectReinforcement() => RuntimeAudioLoader.Instance?.PlayIncorrectAudioClip();
 
         // Numbers/keys are 0-indexed by mission (Mission 1 = index 0 ... Mission 5 = index 4).
         private float PlayFromArray(string[] keys, int index)
         {
-            if (keys == null || index < 0 || index >= keys.Length) return -1f;
+            if (keys == null || index < 0 || index >= keys.Length || RuntimeAudioLoader.Instance == null) return -1f;
             return RuntimeAudioLoader.Instance.PlayRuntimeAudio(keys[index]);
         }
     }

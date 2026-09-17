@@ -393,16 +393,24 @@ namespace tmkoc.lunchforbuilders
             bool overStation = station.ContainsScreenPoint(eventData.position, cam);
             station.SetHoverGlow(false, false);
 
+            // RaiseProgress() runs synchronously inside ResolveAdd/ResolveRemove below, and on the
+            // drop that finishes the recipe it already starts AutoServe -> the mission outro VO
+            // line (on the same shared RuntimeAudioLoader audio source as the reinforcement bark
+            // played just underneath). Capturing the before/after state lets us skip that bark when
+            // this exact drop is what completed the mission, so it doesn't Stop() the outro that
+            // just started playing.
+            bool wasCompletedBefore = hasCompletedThisMission;
             bool success = token.Mode == IngredientDragMode.AddToStation
                 ? ResolveAdd(token, overStation)
                 : ResolveRemove(token, overStation);
+            bool justCompletedMission = !wasCompletedBefore && hasCompletedThisMission;
 
             if (success)
             {
                 characterReaction?.SetSprite(CharacterMood.Happy);
                 characterReaction?.PlayHappyBurst();
                 gameManager.SoundManager?.PlaySFX(sfxEnum.Correct);
-                gameManager.SoundManager?.PlayCorrectReinforcement();
+                if (!justCompletedMission) gameManager.SoundManager?.PlayCorrectReinforcement();
             }
             else
             {
