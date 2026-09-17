@@ -42,6 +42,10 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("Half the total flip duration -- one half shrinks the outgoing face to nothing, the other grows the incoming face back to full width.")]
         [SerializeField] private float flipHalfDuration = 0.2f;
 
+        [Header("Row Layout")]
+        [Tooltip("Vertical distance between rows -- matches the 100-unit spacing already baked into the 5 row slots in the editor (200, 100, 0, -100, -200), so a full 5-row recipe repositions to exactly where it already sits.")]
+        [SerializeField] private float rowSpacing = 100f;
+
         public event Action OnPeekUsed;
 
         private MissionRecipeData mission;
@@ -78,9 +82,10 @@ namespace tmkoc.lunchforbuilders
             }
 
             var requirements = mission.Requirements;
+            int usedCount = requirements?.Length ?? 0;
             for (int i = 0; i < rows.Length; i++)
             {
-                bool inUse = requirements != null && i < requirements.Length;
+                bool inUse = i < usedCount;
                 if (rows[i].icon != null) rows[i].icon.gameObject.SetActive(inUse);
                 lastRowCurrent[i] = 0;
                 if (!inUse) continue;
@@ -94,6 +99,13 @@ namespace tmkoc.lunchforbuilders
                     rows[i].icon.rectTransform.localScale = Vector3.one;
                     rows[i].icon.sprite = req.icon;
                     rows[i].icon.color = Color.white;
+
+                    // Rows are baked in the editor as a fixed top-to-bottom stack for the full 5-row
+                    // case; a recipe using fewer rows re-centers them around the same midpoint
+                    // instead of leaving them pinned to the top slots with empty space below.
+                    Vector2 pos = rows[i].icon.rectTransform.anchoredPosition;
+                    pos.y = ((usedCount - 1) / 2f - i) * rowSpacing;
+                    rows[i].icon.rectTransform.anchoredPosition = pos;
                 }
 
                 rowIsRemoval[i] = req.isRemoval;

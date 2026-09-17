@@ -17,8 +17,8 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("Where placed tokens are anchored/parented once they snap in.")]
         [SerializeField] private RectTransform contentAnchor;
 
-        [Header("Container Boundaries")]
-        [Tooltip("Already children of Content Anchor, each sized/positioned to match one container shape's actual visible bounds. Ingredients are parented into and confined within whichever one the current mission selects (MissionRecipeData.ContainerBoundary).")]
+        [Header("Container Drop Points")]
+        [Tooltip("Already children of Content Anchor -- each marks the BOTTOM of one container's actual visible art (base of the plate/jug), not a bounding area. Ingredients land at whichever one the current mission selects (MissionRecipeData.ContainerBoundary) and pile upward from that single point, so they can never land outside the container's visible shape the way a random point-in-a-bounding-rect could.")]
         [SerializeField] private RectTransform plateBoundary;
         [SerializeField] private RectTransform strawberryLemonadeBoundary;
         [SerializeField] private RectTransform orangeMangoJuiceBoundary;
@@ -38,7 +38,7 @@ namespace tmkoc.lunchforbuilders
         // tokens, not the container/dish image itself).
         public RectTransform ContentImageRectTransform => contentImage != null ? contentImage.rectTransform : null;
 
-        public RectTransform GetBoundary(ContainerBoundary boundary)
+        public RectTransform GetDropPoint(ContainerBoundary boundary)
         {
             switch (boundary)
             {
@@ -64,6 +64,19 @@ namespace tmkoc.lunchforbuilders
         }
 
         public int GetPlacedCount(string ingredientId) => placedCounts.TryGetValue(ingredientId, out int count) ? count : 0;
+
+        // How many tokens (of any ingredient) are currently resting in the station -- used to work
+        // out the next one's stack height, since ingredients pile up from the drop point regardless
+        // of which ingredient type they are (e.g. a salad's broccoli, tomato and corn all share one pile).
+        public int TotalPlacedCount
+        {
+            get
+            {
+                int total = 0;
+                foreach (var count in placedCounts.Values) total += count;
+                return total;
+            }
+        }
 
         // A live token currently placed in the station, for the tutorial hand to point at when
         // hinting a removal -- doesn't remove or mutate anything, just looks.

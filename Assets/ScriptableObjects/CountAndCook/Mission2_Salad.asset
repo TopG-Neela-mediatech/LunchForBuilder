@@ -18,6 +18,7 @@ MonoBehaviour:
   contentAnchorRestY: -100
   contentAnchorSize: {x: 300, y: 120}
   childContentArea: {x: 175, y: 85}
+  containerBoundary: 0
   learningRule: 1
   requirements:
   - ingredientId: BroccoliPiece

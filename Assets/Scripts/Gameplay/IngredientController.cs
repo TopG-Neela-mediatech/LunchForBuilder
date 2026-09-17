@@ -39,6 +39,18 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private float rimHeightOffset = 60f;
         [Tooltip("Phase 2 of landing: falling from the rim down into its final stacked spot.")]
         [SerializeField] private float dropIntoContainerDuration = 0.25f;
+        [Tooltip("Small lift above the drop point's exact position for the first row, so it doesn't sit clipped at/below the container's visible base.")]
+        [SerializeField] private float stackBaseHeight = 8f;
+        [Tooltip("How many items sit side by side before the pile starts a new row above -- some recipes need well over a dozen units of one ingredient (Mission 1's 18 total), so growing straight upward one-at-a-time would climb out of the container; wrapping into rows keeps the whole pile's height bounded regardless of count.")]
+        [SerializeField] private int stackItemsPerRow = 5;
+        [Tooltip("Horizontal distance between columns within a row.")]
+        [SerializeField] private float stackColumnSpacing = 24f;
+        [Tooltip("How much higher each row of the pile sits than the one below it.")]
+        [SerializeField] private float stackStepHeight = 16f;
+        [Tooltip("Random horizontal wobble per item, layered on top of its column position -- small, so it never spreads wider than the container itself and the drop zone always still reads as one item on top of another.")]
+        [SerializeField] private float stackJitterX = 6f;
+        [Tooltip("Random vertical wobble per item, layered on top of its row height.")]
+        [SerializeField] private float stackJitterY = 3f;
 
         public string IngredientId { get; private set; }
         public IngredientDragMode Mode { get; private set; }
@@ -100,15 +112,15 @@ namespace tmkoc.lunchforbuilders
             if (iconImage != null) iconImage.sprite = icon;
         }
 
-        // Places this token directly at a station anchor with no tween -- used for
-        // startingIngredients seeded before the mission's first drop (Mission 4's ice cubes). Same
-        // stacked look as a successfully-dropped token (small random offset, shrunk scale), just
-        // without the fall animation, so the starting pile reads consistently with ones added later.
-        public void PlaceInstantly(RectTransform stationAnchor)
+        // Places this token directly at the drop point with no tween -- used for startingIngredients
+        // seeded before the mission's first drop (Mission 4's ice cubes). Same stacked look as a
+        // successfully-dropped token (same pile offset, shrunk scale), just without the fall
+        // animation, so the starting pile reads consistently with ones added later.
+        public void PlaceInstantly(RectTransform dropPoint, int stackIndex)
         {
-            Vector2 stackedOffset = RandomStackOffset(stationAnchor);
-            restParent = stationAnchor;
-            rectTransform.SetParent(stationAnchor, false);
+            Vector2 stackedOffset = StackedOffset(stackIndex);
+            restParent = dropPoint;
+            rectTransform.SetParent(dropPoint, false);
             rectTransform.anchoredPosition = stackedOffset;
             rectTransform.localScale = Vector3.one * stackedScale;
             restAnchoredPos = stackedOffset;
@@ -158,16 +170,17 @@ namespace tmkoc.lunchforbuilders
         // ---- Outcomes, driven by CookingManager after it resolves the drop ----
 
         // Lands in two beats: rises to the container's rim (partway shrunk), then falls from there
-        // into a random spot inside (fully shrunk to stackedScale) -- reads as "dropped in", rather
-        // than sliding flat across the screen. Stays visible and parented under the station at a
-        // small random offset, so several placed ingredients visibly pile up instead of either
-        // stacking in one exact spot or vanishing once counted.
-        public void SnapIntoStation(RectTransform stationAnchor)
+        // down onto the drop point -- reads as "dropped in", rather than sliding flat across the
+        // screen. Stays visible and parented under the station at a small offset above the pile so
+        // far, so several placed ingredients visibly stack up from the container's base instead of
+        // either landing in one exact spot or scattering to a random point that can fall outside the
+        // container's actual (non-rectangular) visible art.
+        public void SnapIntoStation(RectTransform dropPoint, int stackIndex)
         {
             isLocked = true;
-            Vector2 anchorLocalPos = ToLocalAnchoredPos(stationAnchor, dragLayer);
+            Vector2 anchorLocalPos = ToLocalAnchoredPos(dropPoint, dragLayer);
             Vector2 rimPos = anchorLocalPos + new Vector2(0f, rimHeightOffset);
-            Vector2 stackedOffset = RandomStackOffset(stationAnchor);
+            Vector2 stackedOffset = StackedOffset(stackIndex);
             Vector2 landedPos = anchorLocalPos + stackedOffset;
             float rimScale = (1f + stackedScale) * 0.5f;
 
@@ -179,11 +192,11 @@ namespace tmkoc.lunchforbuilders
             seq.Join(rectTransform.DOScale(stackedScale, dropIntoContainerDuration));
             seq.OnComplete(() =>
             {
-                rectTransform.SetParent(stationAnchor, false);
+                rectTransform.SetParent(dropPoint, false);
                 rectTransform.anchoredPosition = stackedOffset;
                 rectTransform.localScale = Vector3.one * stackedScale;
                 isLocked = false;
-                restParent = stationAnchor;
+                restParent = dropPoint;
                 restAnchoredPos = stackedOffset;
                 // A small "landed!" settle, gentler than the rejection shake -- accepting a drop
                 // reads as a positive impact rather than a silent stop.
@@ -234,16 +247,21 @@ namespace tmkoc.lunchforbuilders
             return new Vector2(local.x, local.y);
         }
 
-        // A random point inside stationAnchor's own rect -- stationAnchor is one of Preparation
-        // Station's dedicated boundary RectTransforms (Plate / StrawberryLemonade /
-        // OrangeMangoJuice), sized and positioned in the scene to match that container's actual
-        // visible bounds, so this never needs a separately-tuned size value.
-        private Vector2 RandomStackOffset(RectTransform stationAnchor)
+        // Builds the pile upward from the drop point rather than scattering across a bounding area --
+        // stackIndex is "how many tokens are already resting in the container". Items fill a row left
+        // to right before a new row starts above it, so a recipe needing a dozen-plus units of one
+        // ingredient still tops out at a handful of rows instead of climbing straight out of the
+        // container. Staying close to the drop point (rather than spanning a whole boundary rect) is
+        // what keeps ingredients from ever landing outside the container's actual visible shape.
+        private Vector2 StackedOffset(int stackIndex)
         {
-            Vector2 size = stationAnchor.rect.size;
-            return new Vector2(
-                UnityEngine.Random.Range(-size.x * 0.5f, size.x * 0.5f),
-                UnityEngine.Random.Range(-size.y * 0.5f, size.y * 0.5f));
+            int row = stackItemsPerRow > 0 ? stackIndex / stackItemsPerRow : stackIndex;
+            int col = stackItemsPerRow > 0 ? stackIndex % stackItemsPerRow : 0;
+            float colOffset = (col - (stackItemsPerRow - 1) / 2f) * stackColumnSpacing;
+
+            float x = colOffset + UnityEngine.Random.Range(-stackJitterX, stackJitterX);
+            float y = stackBaseHeight + row * stackStepHeight + UnityEngine.Random.Range(-stackJitterY, stackJitterY);
+            return new Vector2(x, y);
         }
     }
 }

@@ -66,7 +66,13 @@ namespace tmkoc.lunchforbuilders
             else StartIdleBob();
         }
 
-        public void Setup(MissionRecipeData missionData) => mission = missionData;
+        public void Setup(MissionRecipeData missionData)
+        {
+            mission = missionData;
+            // Undo whatever DisableReactionParticles() did for the previous mission's win/lose beat.
+            SetPoolActive(happyParticles, true);
+            SetPoolActive(sadParticles, true);
+        }
 
         // No shake -- used while the character is off-screen/invisible (the intro reveal, right
         // before it slides into view), where a shake would be pointless and would otherwise fight
@@ -109,8 +115,31 @@ namespace tmkoc.lunchforbuilders
             var chosen = pool[Random.Range(0, pool.Length)];
             if (chosen == null) return;
             // Restart cleanly even if it's still finishing a previous burst.
+            chosen.gameObject.SetActive(true);
             chosen.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             chosen.Play();
+        }
+
+        // Called right before the win/lose panel slides up -- these particle systems' renderer
+        // settings put them on a sort order high enough to bleed through the panel if a burst is
+        // still fading out when it appears, so they're fully stopped/cleared and deactivated rather
+        // than just left to finish naturally. Reactivated at the start of the next mission (Setup),
+        // since PlayRandomParticle needs an active GameObject to Play() on again.
+        public void DisableReactionParticles()
+        {
+            SetPoolActive(happyParticles, false);
+            SetPoolActive(sadParticles, false);
+        }
+
+        private void SetPoolActive(ParticleSystem[] pool, bool active)
+        {
+            if (pool == null) return;
+            foreach (var ps in pool)
+            {
+                if (ps == null) continue;
+                if (!active) ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                ps.gameObject.SetActive(active);
+            }
         }
 
         private void OnDestroy()

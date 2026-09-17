@@ -73,6 +73,9 @@ namespace tmkoc.lunchforbuilders
                 if (winCommonImage != null) winCommonImage.sprite = mission.CompletedRecipeSprite;
             }
             RotateRaysLoop(winRaysT, 8f, true);
+            // The panel is covering the screen now -- stop and clear any confetti still bursting so
+            // it can't keep rendering on top of it (its own sort order sits above the UI panel).
+            confettiEffect?.Stop(true);
         }
 
         // Called by CookingManager as part of its win celebration beat, before it reports the
@@ -89,6 +92,7 @@ namespace tmkoc.lunchforbuilders
                 if (loseCommonImage != null) loseCommonImage.sprite = mission.StationIcon;
             }
             RotateRaysLoop(loseRaysT, 8f, false);
+            confettiEffect?.Stop(true);
         }
 
         private void Show(RectTransform panel, Button button)

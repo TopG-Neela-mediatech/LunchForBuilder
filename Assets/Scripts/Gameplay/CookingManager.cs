@@ -30,6 +30,8 @@ namespace tmkoc.lunchforbuilders
         [Header("Pacing")]
         [Tooltip("How long the gratification beat holds (dish swaps to its completed sprite) before the mission is reported complete -- fires automatically the instant the recipe is finished, no button press.")]
         [SerializeField] private float serveCompleteDelay = 1.5f;
+        [Tooltip("Floor on how long the win/lose panel waits before popping up, regardless of how short the outro/lose VO line is (or if it's missing entirely) -- keeps the celebration/fail beat from feeling rushed.")]
+        [SerializeField] private float minPanelPopupDelay = 3f;
 
         [Header("Intro Reveal")]
         [Tooltip("How long the Recipe Card (sliding in from off-screen left) and the Preparation Station's content (sliding up from off-screen bottom) take to reach their resting position -- both run at the same time.")]
@@ -69,6 +71,11 @@ namespace tmkoc.lunchforbuilders
         // 1 itself -- waits out the normal idle delay. Same idea as TutorialController's
         // isFirstHintEver in BuildABot.
         private bool isFirstHintEver = true;
+        // Dragging something OUT of the station (Mission 4's ice cubes) is a brand new interaction
+        // the player has never needed before, so it gets the same "don't make them wait" treatment
+        // as the very first hint of the whole session, the first time it's ever needed -- otherwise
+        // they'd have to sit idle for the normal delay before finding out removal is even possible.
+        private bool isFirstRemovalHintEver = true;
         // Guards the auto-serve from firing more than once per mission -- RaiseProgress runs on
         // every resolved drop, and the recipe stays "complete" for every one of them after the first.
         private bool hasCompletedThisMission;
@@ -86,9 +93,9 @@ namespace tmkoc.lunchforbuilders
         private Tween timerPulseTween;
         private Color timerNormalColor;
         private bool timerUrgentActive;
-        // Which of PreparationStation's 3 boundary RectTransforms the current mission's ingredients
-        // get parented into -- resolved once per mission start from MissionRecipeData.ContainerBoundary.
-        private RectTransform activeContainerBoundary;
+        // Which of PreparationStation's 3 drop-point RectTransforms the current mission's ingredients
+        // fall onto and pile up from -- resolved once per mission start from MissionRecipeData.ContainerBoundary.
+        private RectTransform activeDropPoint;
 
         private void Awake()
         {
@@ -136,7 +143,7 @@ namespace tmkoc.lunchforbuilders
             station.Clear();
             station.SetContentSprite(currentMission.StationIcon);
             station.SetContentAnchorSize(currentMission.ContentAnchorSize);
-            activeContainerBoundary = station.GetBoundary(currentMission.ContainerBoundary);
+            activeDropPoint = station.GetDropPoint(currentMission.ContainerBoundary);
             SeedStartingIngredients();
             recipeCard?.Setup(currentMission);
             characterReaction?.Setup(currentMission);
@@ -249,9 +256,19 @@ namespace tmkoc.lunchforbuilders
                 UpdateTimerText(remaining);
             }
             timerRoutine = null;
-            // Fires the instant time runs out -- LevelManager reacts to InvokeLevelLose() by showing
-            // the lose panel right away too, so this and the panel appear together, no delay.
-            gameManager.SoundManager?.PlayMissionLose(currentMissionIndex);
+            // The lose panel is about to slide up -- stop any reaction burst still fading out so it
+            // can't render on top of it (its particle renderer sorts above the UI otherwise).
+            characterReaction?.DisableReactionParticles();
+            StartCoroutine(LoseRoutine());
+        }
+
+        // Same idea as the win celebration's own wait -- give the "time's up" line room to finish
+        // (or, if it's short or missing, at least minPanelPopupDelay) before LevelManager reacts to
+        // InvokeLevelLose() by sliding the lose panel up, so it never pops up mid-sentence or feels rushed.
+        private IEnumerator LoseRoutine()
+        {
+            float len = gameManager.SoundManager != null ? gameManager.SoundManager.PlayMissionLose(currentMissionIndex) : -1f;
+            yield return new WaitForSeconds(Mathf.Max(len, minPanelPopupDelay));
             gameManager.InvokeLevelLose();
         }
 
@@ -358,7 +375,7 @@ namespace tmkoc.lunchforbuilders
                 {
                     var token = slot.SpawnPlacedToken(this, dragLayer);
                     if (token == null) continue;
-                    token.PlaceInstantly(activeContainerBoundary);
+                    token.PlaceInstantly(activeDropPoint, station.TotalPlacedCount);
                     station.RegisterPlaced(starting.ingredientId, token);
                 }
             }
@@ -409,15 +426,13 @@ namespace tmkoc.lunchforbuilders
             {
                 characterReaction?.SetSprite(CharacterMood.Happy);
                 characterReaction?.PlayHappyBurst();
-                gameManager.SoundManager?.PlaySFX(sfxEnum.Correct);
-                if (!justCompletedMission) gameManager.SoundManager?.PlayCorrectReinforcement();
+                gameManager.SoundManager?.PlaySFX(sfxEnum.Correct);           
             }
             else
             {
                 characterReaction?.SetSprite(CharacterMood.Sad);
                 characterReaction?.PlaySadBurst();
-                gameManager.SoundManager?.PlaySFX(sfxEnum.Incorrect);
-                gameManager.SoundManager?.PlayIncorrectReinforcement();
+                gameManager.SoundManager?.PlaySFX(sfxEnum.Incorrect);              
             }
 
             gameManager.InvokeIngredientResolved(token.IngredientId, success);
@@ -430,8 +445,9 @@ namespace tmkoc.lunchforbuilders
 
             if (success)
             {
+                int stackIndex = station.TotalPlacedCount;
                 station.RegisterPlaced(token.IngredientId, token);
-                token.SnapIntoStation(activeContainerBoundary);
+                token.SnapIntoStation(activeDropPoint, stackIndex);
                 AdvanceSequenceIfStepComplete(requirement);
                 RaiseProgress();
             }
@@ -593,8 +609,9 @@ namespace tmkoc.lunchforbuilders
                 if (removed >= req.requiredCount) continue;
                 var placedToken = station.PeekPlacedToken(req.ingredientId);
                 if (placedToken == null) continue;
-                tutorial.ShowRemoveHint(placedToken.GetComponent<RectTransform>(), immediate);
+                tutorial.ShowRemoveHint(placedToken.GetComponent<RectTransform>(), immediate || isFirstRemovalHintEver);
                 isFirstHintEver = false;
+                isFirstRemovalHintEver = false;
                 return;
             }
 
@@ -633,7 +650,7 @@ namespace tmkoc.lunchforbuilders
         private IEnumerator ServeCompleteRoutine()
         {
             float len = gameManager.SoundManager != null ? gameManager.SoundManager.PlayMissionOutro(currentMissionIndex) : -1f;
-            yield return new WaitForSeconds(Mathf.Max(len, serveCompleteDelay));
+            yield return new WaitForSeconds(Mathf.Max(len, serveCompleteDelay, minPanelPopupDelay));
 
             PlayWinPunchFeedback();
             yield return new WaitForSeconds(winPunchDuration);
@@ -641,6 +658,10 @@ namespace tmkoc.lunchforbuilders
             gameManager.EndPanelScript?.PlayConfetti();
             yield return new WaitForSeconds(confettiLeadTime);
 
+            // The win panel is about to slide up over the confetti -- stop any reaction burst still
+            // fading out so it can't render on top of it (its particle renderer sorts above the UI
+            // otherwise).
+            characterReaction?.DisableReactionParticles();
             gameManager.InvokeMissionComplete(currentMissionIndex);
         }
 

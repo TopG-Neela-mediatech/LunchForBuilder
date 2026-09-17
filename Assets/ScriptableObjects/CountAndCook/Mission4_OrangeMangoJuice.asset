@@ -17,6 +17,7 @@ MonoBehaviour:
   completedRecipeSprite: {fileID: 21300000, guid: 764448673ec31e54ab624ca40aff95b3, type: 3}
   contentAnchorRestY: 0
   contentAnchorSize: {x: 300, y: 300}
+  containerBoundary: 2
   learningRule: 3
   requirements:
   - ingredientId: OrangeSlice

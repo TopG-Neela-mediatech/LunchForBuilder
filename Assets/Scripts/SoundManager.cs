@@ -80,18 +80,7 @@ namespace tmkoc.lunchforbuilders
             if (audioMapper.idleNudges == null || audioMapper.idleNudges.Length == 0 || RuntimeAudioLoader.Instance == null) return -1f;
             int rand = UnityEngine.Random.Range(0, audioMapper.idleNudges.Length);
             return RuntimeAudioLoader.Instance.PlayRuntimeAudio(audioMapper.idleNudges[rand]);
-        }
-
-        // ---- Correct / Incorrect spoken reinforcement -- these come from the shared "common" audio
-        // bundle every Playschool game already downloads (RuntimeAudioLoader.Start() loads it as
-        // category "common"), not this game's own xlsx, so they're pulled directly rather than
-        // added as new CountAndCook-specific lines. Each call's own Stop()-then-PlayOneShot on the
-        // shared _commonAudioSource is what keeps every VO line (name callout, correct/incorrect,
-        // idle nudge, intro/outro) from ever overlapping another. ----
-        public void PlayCorrectReinforcement() => RuntimeAudioLoader.Instance?.PlayCorrectAudioClip();
-        public void PlayIncorrectReinforcement() => RuntimeAudioLoader.Instance?.PlayIncorrectAudioClip();
-
-        // Numbers/keys are 0-indexed by mission (Mission 1 = index 0 ... Mission 5 = index 4).
+        }    
         private float PlayFromArray(string[] keys, int index)
         {
             if (keys == null || index < 0 || index >= keys.Length || RuntimeAudioLoader.Instance == null) return -1f;
