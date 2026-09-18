@@ -15,14 +15,11 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private MissionRecipeData[] missions;
 
         // The mission index the player is currently on -- doubles as the resume point on a fresh
-        // launch and the value persisted via HelperGameCategoryDataSaver.
+        // launch and the value persisted via HelperGameCategoryDataSaver. Also the sole "has this
+        // device already seen the story" signal below -- deliberately not tracked with a second,
+        // separate flag of our own (e.g. PlayerPrefs); HelperGameCategoryDataSaver's saved progress
+        // is the one source of truth for resume state, so everything goes through its own methods.
         public int currentLevelIndex { get; private set; }
-
-        // Tracked separately from currentLevelIndex/HelperGameCategoryDataSaver's completed-level
-        // progress -- a player who quits right after the story finishes but before completing
-        // Mission 1 still has currentLevelIndex == 0, and we don't want the story replaying on their
-        // next launch. This flag is the actual "has this device seen the intro" source of truth.
-        private const string StorySeenKey = "CountAndCook_StorySeen";
 
         private void StartLevel() => GameManager.Instance.InvokeLevelStart();
 
@@ -31,8 +28,6 @@ namespace tmkoc.lunchforbuilders
         private void HandleStoryFinished()
         {
             if (storyController != null) storyController.gameObject.SetActive(false);
-            PlayerPrefs.SetInt(StorySeenKey, 1);
-            PlayerPrefs.Save();
             StartLevel();
         }
 
@@ -50,9 +45,9 @@ namespace tmkoc.lunchforbuilders
             GameManager.Instance.OnLevelLose += OnLevelLose;
 
             // The storyboard (broken playground, tired workers) only ever plays once per device --
-            // on every launch after that, skip straight into gameplay.
-            bool alreadySeenStory = currentLevelIndex > 0 || PlayerPrefs.GetInt(StorySeenKey, 0) == 1;
-            if (!alreadySeenStory && storyController != null)
+            // a returning player who's already completed at least one mission (per
+            // HelperGameCategoryDataSaver's saved progress) skips straight into gameplay.
+            if (currentLevelIndex == 0 && storyController != null)
             {
                 storyController.gameObject.SetActive(true);
             }

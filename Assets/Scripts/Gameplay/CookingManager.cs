@@ -603,6 +603,13 @@ namespace tmkoc.lunchforbuilders
             StopIdleParticleTimer();
             StopIdleSpriteRevertTimer();
             gameManager.TutorialManager?.CancelHint();
+            // The recipe is done -- nothing should still be draggable from here. Placed
+            // RemoveFromStation tokens lose their drag along with everything else once
+            // HidePlacedTokens() below deactivates them (Unity doesn't fire drag events on an
+            // inactive GameObject); pantry slots need an explicit push since they otherwise stay
+            // interactable for the rest of the mission (only Mission 3's ordering ever turns them
+            // off, and only some of them).
+            foreach (var slot in pantrySlots) slot.SetInteractable(false);
             characterReaction?.SetSprite(CharacterMood.Happy);
             characterReaction?.PlayHappyBurst();
             station.SetContentSprite(currentMission.CompletedRecipeSprite);
@@ -610,6 +617,13 @@ namespace tmkoc.lunchforbuilders
             // built" -- once it's done, the completed-dish sprite replaces them, so the leftover
             // icons need to stop sitting on top of it.
             station.HidePlacedTokens();
+
+            // Win punch + confetti fire right here, the instant the dish swaps to its completed
+            // sprite -- this IS the moment of victory, not something that should wait for the
+            // outro line to finish first.
+            PlayWinPunchFeedback();
+            gameManager.EndPanelScript?.PlayConfetti();
+
             StartCoroutine(ServeCompleteRoutine());
         }
 
@@ -665,21 +679,16 @@ namespace tmkoc.lunchforbuilders
             return true;
         }
 
-        // The full win celebration beat, in order: outro line plays out -> a positive-feedback punch
-        // on the character and the completed dish -> confetti bursts (EndPanelScript owns the actual
-        // effect, this just triggers it) -> only THEN is the mission reported complete, which is what
-        // LevelManager reacts to by sliding up the win panel. Every step finishes before the next
-        // starts, so the panel never steals the moment from the animation/confetti.
+        // The win punch and confetti already fired in AutoServe, right as the dish swapped to its
+        // completed sprite. This just holds the celebration on screen -- at least as long as the
+        // outro line, the win punch + confetti need to actually be seen, and minPanelPopupDelay's
+        // own floor -- before reporting the mission complete, which is what LevelManager reacts to
+        // by sliding up the win panel.
         private IEnumerator ServeCompleteRoutine()
         {
             float len = gameManager.SoundManager != null ? gameManager.SoundManager.PlayMissionOutro(currentMissionIndex) : -1f;
-            yield return new WaitForSeconds(Mathf.Max(len, serveCompleteDelay, minPanelPopupDelay));
-
-            PlayWinPunchFeedback();
-            yield return new WaitForSeconds(winPunchDuration);
-
-            gameManager.EndPanelScript?.PlayConfetti();
-            yield return new WaitForSeconds(confettiLeadTime);
+            float minDelay = Mathf.Max(serveCompleteDelay, minPanelPopupDelay, winPunchDuration + confettiLeadTime);
+            yield return new WaitForSeconds(Mathf.Max(len, minDelay));
 
             // The win panel is about to slide up over the confetti -- stop any reaction burst still
             // fading out so it can't render on top of it (its particle renderer sorts above the UI
