@@ -158,9 +158,18 @@ namespace tmkoc.lunchforbuilders
                 }
             }
 
+            // The two card fronts are alternatives, not layers on the same face -- exactly one of
+            // them is ever active. Memory gets CardFrontFace (with its timed reveal/hide below);
+            // every other mission gets the single-ingredient display instead, and CardFrontFace
+            // stays off rather than sitting there active-but-empty.
             if (singleDisplayRoot != null) singleDisplayRoot.gameObject.SetActive(!showAllRowsAtOnce);
-            if (!showAllRowsAtOnce)
+            if (showAllRowsAtOnce)
             {
+                ShowFace(true, animate: false);
+            }
+            else
+            {
+                if (cardFrontFace != null) cardFrontFace.SetActive(false);
                 if (singleDisplayRoot != null)
                 {
                     singleDisplayRoot.DOKill();
@@ -168,8 +177,6 @@ namespace tmkoc.lunchforbuilders
                 }
                 if (usedCount > 0) ApplySingleDisplay(0);
             }
-
-            ShowFace(true, animate: false);
 
             if (mission.LearningRule == LearningRule.Memory)
                 memoryRoutine = StartCoroutine(MemoryRevealRoutine());
