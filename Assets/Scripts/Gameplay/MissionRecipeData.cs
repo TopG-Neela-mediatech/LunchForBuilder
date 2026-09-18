@@ -47,8 +47,6 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private IngredientRequirement[] startingIngredients;
         [Tooltip("Memory missions only: how long the Recipe Card stays visible before flipping face-down.")]
         [SerializeField] private float memoryRevealSeconds = 5f;
-        [Tooltip("Memory missions only: how long a Peek reveals the card again.")]
-        [SerializeField] private float peekRevealSeconds = 3f;
 
         [Header("Character Reaction")]
         [Tooltip("Default/waiting state shown through the mission, and reverted back to a few seconds after a Sad reaction.")]
@@ -72,7 +70,6 @@ namespace tmkoc.lunchforbuilders
         public IngredientRequirement[] Requirements => requirements;
         public IngredientRequirement[] StartingIngredients => startingIngredients;
         public float MemoryRevealSeconds => memoryRevealSeconds;
-        public float PeekRevealSeconds => peekRevealSeconds;
         public Sprite HungryCharacterSprite => hungryCharacterSprite;
         public Sprite SadCharacterSprite => sadCharacterSprite;
         public Sprite HappyCharacterSprite => happyCharacterSprite;

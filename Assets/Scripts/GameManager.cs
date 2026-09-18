@@ -42,7 +42,6 @@ namespace tmkoc.lunchforbuilders
         public event Action<string, bool> OnIngredientResolved;
         public event Action<int, int> OnRecipeProgress;
         public event Action<int> OnMissionComplete;
-        public event Action<int> OnPeekUsed;
 
         public void InvokeLevelStart() => OnLevelStart?.Invoke();
         public void InvokeLevelWin() => OnLevelWin?.Invoke();
@@ -52,7 +51,6 @@ namespace tmkoc.lunchforbuilders
         public void InvokeIngredientResolved(string ingredientId, bool wasCorrect) => OnIngredientResolved?.Invoke(ingredientId, wasCorrect);
         public void InvokeRecipeProgress(int placed, int required) => OnRecipeProgress?.Invoke(placed, required);
         public void InvokeMissionComplete(int missionIndex) => OnMissionComplete?.Invoke(missionIndex);
-        public void InvokePeekUsed(int missionIndex) => OnPeekUsed?.Invoke(missionIndex);
         #endregion
     }
 }

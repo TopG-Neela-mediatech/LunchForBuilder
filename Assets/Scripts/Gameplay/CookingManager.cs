@@ -21,6 +21,8 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private GameObject gameplayRoot;
         [SerializeField] private PreparationStation station;
         [SerializeField] private PantrySlot[] pantrySlots;
+        [Tooltip("Even if a recipe only needs one or two ingredient types, at least this many pantry slots stay visible -- extra decoy ingredients (picked randomly from whatever's left) mean the player has to actually read the recipe instead of just clearing out the only options on the shelf.")]
+        [SerializeField] private int minPantrySlotsVisible = 5;
         [SerializeField] private RecipeCardController recipeCard;
         [SerializeField] private RectTransform dragLayer;
         [SerializeField] private CharacterReactionController characterReaction;
@@ -100,7 +102,6 @@ namespace tmkoc.lunchforbuilders
         private void Awake()
         {
             foreach (var slot in pantrySlots) slot.Init(this, dragLayer);
-            if (recipeCard != null) recipeCard.OnPeekUsed += HandlePeekUsed;
 
             // Rest positions and the canvas they're measured against are captured once, up front --
             // every later reveal computes its off-screen start from these, never from wherever the
@@ -514,9 +515,15 @@ namespace tmkoc.lunchforbuilders
         // whenever its ingredient isn't part of the CURRENT mission's add-requirements -- e.g. the
         // Ice Cube slot used to add 6 cubes in Mission 1 has no business appearing in Mission 4,
         // where Ice Cube only ever appears as a removal requirement (the 6 starting cubes are
-        // seeded directly into the station, never dragged in from this pantry).
+        // seeded directly into the station, never dragged in from this pantry). On top of the
+        // actually-needed slots, a handful of decoy ingredients stay visible too (up to
+        // minPantrySlotsVisible total) -- a shelf with only the exact right answers on it doesn't
+        // ask the player to identify anything. A decoy that gets dragged in just bounces back like
+        // any other wrong drop; nothing extra needed for that part.
         private void UpdatePantryVisibility()
         {
+            var decoys = new List<PantrySlot>();
+            int requiredCount = 0;
             foreach (var slot in pantrySlots)
             {
                 bool usedThisMission = false;
@@ -525,6 +532,22 @@ namespace tmkoc.lunchforbuilders
                     if (!req.isRemoval && req.ingredientId == slot.IngredientId) { usedThisMission = true; break; }
                 }
                 slot.gameObject.SetActive(usedThisMission);
+                if (usedThisMission) requiredCount++;
+                else decoys.Add(slot);
+            }
+
+            int decoysNeeded = Mathf.Max(0, minPantrySlotsVisible - requiredCount);
+            ShuffleInPlace(decoys);
+            for (int i = 0; i < decoysNeeded && i < decoys.Count; i++)
+                decoys[i].gameObject.SetActive(true);
+        }
+
+        private static void ShuffleInPlace(List<PantrySlot> list)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = UnityEngine.Random.Range(0, i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
             }
         }
 
@@ -684,8 +707,6 @@ namespace tmkoc.lunchforbuilders
             }
         }
 
-        private void HandlePeekUsed() => gameManager.InvokePeekUsed(currentMissionIndex);
-
         private PantrySlot FindPantrySlot(string ingredientId)
         {
             foreach (var slot in pantrySlots)
@@ -695,7 +716,6 @@ namespace tmkoc.lunchforbuilders
 
         private void OnDestroy()
         {
-            if (recipeCard != null) recipeCard.OnPeekUsed -= HandlePeekUsed;
             timerPulseTween?.Kill();
         }
     }

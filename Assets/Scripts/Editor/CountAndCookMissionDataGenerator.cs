@@ -34,7 +34,6 @@ namespace tmkoc.lunchforbuilders.Editor
             public ReqDef[] requirements;
             public ReqDef[] starting;
             public float memoryReveal;
-            public float peekReveal;
         }
 
         [MenuItem("Count And Cook/Generate Default Mission Data")]
@@ -57,7 +56,6 @@ namespace tmkoc.lunchforbuilders.Editor
                     },
                     starting = new ReqDef[0],
                     memoryReveal = 0f,
-                    peekReveal = 0f,
                 },
                 new MissionDef
                 {
@@ -73,7 +71,6 @@ namespace tmkoc.lunchforbuilders.Editor
                     },
                     starting = new ReqDef[0],
                     memoryReveal = 0f,
-                    peekReveal = 0f,
                 },
                 new MissionDef
                 {
@@ -90,7 +87,6 @@ namespace tmkoc.lunchforbuilders.Editor
                     },
                     starting = new ReqDef[0],
                     memoryReveal = 0f,
-                    peekReveal = 0f,
                 },
                 new MissionDef
                 {
@@ -108,7 +104,6 @@ namespace tmkoc.lunchforbuilders.Editor
                         new ReqDef("IceCube", 6),
                     },
                     memoryReveal = 0f,
-                    peekReveal = 0f,
                 },
                 new MissionDef
                 {
@@ -125,7 +120,6 @@ namespace tmkoc.lunchforbuilders.Editor
                     },
                     starting = new ReqDef[0],
                     memoryReveal = 5f,
-                    peekReveal = 3f,
                 },
             };
 
@@ -147,7 +141,6 @@ namespace tmkoc.lunchforbuilders.Editor
             so.FindProperty("dishName").stringValue = def.dishName;
             so.FindProperty("learningRule").enumValueIndex = (int)def.rule;
             so.FindProperty("memoryRevealSeconds").floatValue = def.memoryReveal;
-            so.FindProperty("peekRevealSeconds").floatValue = def.peekReveal;
 
             WriteRequirementArray(so.FindProperty("requirements"), def.requirements);
             WriteRequirementArray(so.FindProperty("startingIngredients"), def.starting);

@@ -64,12 +64,27 @@ namespace tmkoc.lunchforbuilders
 
         // ---- Ingredient name callout ("Ice Cube!", "Lemon Slice!" ...) -- played the instant the
         // player picks up (starts dragging) any ingredient, add or remove alike. ----
+        private string activeIngredientCalloutId;
+        private float activeIngredientCalloutEndTime;
+
         public float PlayIngredientName(string ingredientId)
         {
             if (audioMapper.ingredientNames == null || RuntimeAudioLoader.Instance == null) return -1f;
+
+            // Rapidly dragging the SAME ingredient over and over would otherwise restart its callout
+            // every single time -- a stutter rather than a name. Leave it playing out instead, but a
+            // DIFFERENT ingredient always interrupts immediately (RuntimeAudioLoader's PlayRuntimeAudio
+            // already Stop()s the shared source before every PlayOneShot).
+            if (ingredientId == activeIngredientCalloutId && Time.time < activeIngredientCalloutEndTime)
+                return activeIngredientCalloutEndTime - Time.time;
+
             foreach (var entry in audioMapper.ingredientNames)
             {
-                if (entry.ingredientId == ingredientId) return RuntimeAudioLoader.Instance.PlayRuntimeAudio(entry.key);
+                if (entry.ingredientId != ingredientId) continue;
+                float len = RuntimeAudioLoader.Instance.PlayRuntimeAudio(entry.key);
+                activeIngredientCalloutId = ingredientId;
+                activeIngredientCalloutEndTime = Time.time + Mathf.Max(len, 0f);
+                return len;
             }
             return -1f;
         }
