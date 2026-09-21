@@ -257,10 +257,21 @@ namespace tmkoc.lunchforbuilders
                 UpdateTimerText(remaining);
             }
             timerRoutine = null;
+            // The mission is over (lost) -- nothing should still be draggable while the lose VO/
+            // panel-popup delay plays out below.
+            DisableAllPantrySlots();
             // The lose panel is about to slide up -- stop any reaction burst still fading out so it
             // can't render on top of it (its particle renderer sorts above the UI otherwise).
             characterReaction?.DisableReactionParticles();
             StartCoroutine(LoseRoutine());
+        }
+
+        // Pantry slots otherwise stay interactable for the rest of the mission (only Mission 3's
+        // ordering ever turns some of them off) -- called once the mission is over (won or lost) so
+        // nothing can still be dragged while the celebration/fail beat and panel popup play out.
+        private void DisableAllPantrySlots()
+        {
+            foreach (var slot in pantrySlots) slot.SetInteractable(false);
         }
 
         // Same idea as the win celebration's own wait -- give the "time's up" line room to finish
@@ -376,7 +387,8 @@ namespace tmkoc.lunchforbuilders
                 {
                     var token = slot.SpawnPlacedToken(this, dragLayer);
                     if (token == null) continue;
-                    token.PlaceInstantly(activeDropPoint, station.TotalPlacedCount);
+                    float startingScale = currentMission.PlacedScaleMultiplier * starting.placedScaleMultiplier;
+                    token.PlaceInstantly(activeDropPoint, station.TotalPlacedCount, currentMission.StackVertically, startingScale);
                     station.RegisterPlaced(starting.ingredientId, token);
                 }
             }
@@ -433,7 +445,10 @@ namespace tmkoc.lunchforbuilders
             {
                 characterReaction?.SetSprite(CharacterMood.Sad);
                 characterReaction?.PlaySadBurst();
-                gameManager.SoundManager?.PlaySFX(sfxEnum.Incorrect);              
+                gameManager.SoundManager?.PlaySFX(sfxEnum.Incorrect);
+                // Memory missions only (a no-op everywhere else) -- a wrong drop briefly re-reveals
+                // the recipe as a free reminder, instead of the mistake just being unexplained.
+                recipeCard?.NotifyIncorrectDrop();
             }
 
             gameManager.InvokeIngredientResolved(token.IngredientId, success);
@@ -448,7 +463,8 @@ namespace tmkoc.lunchforbuilders
             {
                 int stackIndex = station.TotalPlacedCount;
                 station.RegisterPlaced(token.IngredientId, token);
-                token.SnapIntoStation(activeDropPoint, stackIndex);
+                float placedScale = currentMission.PlacedScaleMultiplier * requirement.placedScaleMultiplier;
+                token.SnapIntoStation(activeDropPoint, stackIndex, currentMission.StackVertically, placedScale);
                 AdvanceSequenceIfStepComplete(requirement);
                 RaiseProgress();
             }
@@ -606,10 +622,8 @@ namespace tmkoc.lunchforbuilders
             // The recipe is done -- nothing should still be draggable from here. Placed
             // RemoveFromStation tokens lose their drag along with everything else once
             // HidePlacedTokens() below deactivates them (Unity doesn't fire drag events on an
-            // inactive GameObject); pantry slots need an explicit push since they otherwise stay
-            // interactable for the rest of the mission (only Mission 3's ordering ever turns them
-            // off, and only some of them).
-            foreach (var slot in pantrySlots) slot.SetInteractable(false);
+            // inactive GameObject); pantry slots need an explicit push (see DisableAllPantrySlots).
+            DisableAllPantrySlots();
             characterReaction?.SetSprite(CharacterMood.Happy);
             characterReaction?.PlayHappyBurst();
             station.SetContentSprite(currentMission.CompletedRecipeSprite);

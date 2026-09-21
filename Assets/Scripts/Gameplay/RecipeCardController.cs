@@ -372,6 +372,27 @@ namespace tmkoc.lunchforbuilders
             memoryRoutine = null;
         }
 
+        // Memory missions only (a no-op everywhere else) -- a wrong drop briefly re-reveals the
+        // recipe as a free reminder. If it's already showing -- whether from the initial reveal or
+        // an earlier mistake -- this does nothing rather than restarting the flip/timer; only once
+        // it's hidden again does the next mistake trigger a fresh reveal.
+        public void NotifyIncorrectDrop()
+        {
+            if (!showAllRowsAtOnce || mission == null) return;
+            if (cardFrontFace != null && cardFrontFace.activeSelf) return;
+
+            StopMemoryRoutine();
+            ShowFace(true);
+            memoryRoutine = StartCoroutine(MistakeRevealRoutine());
+        }
+
+        private IEnumerator MistakeRevealRoutine()
+        {
+            yield return new WaitForSeconds(mission.MistakeRevealSeconds);
+            ShowFace(false);
+            memoryRoutine = null;
+        }
+
         // Hides/reveals the recipe by pinching the front face shut (scale X to 0) then back open
         // again -- no separate "back" object needed, hidden just means nothing is shown while it's
         // collapsed. animate=false (Setup's initial reset) snaps straight to the target state instead.

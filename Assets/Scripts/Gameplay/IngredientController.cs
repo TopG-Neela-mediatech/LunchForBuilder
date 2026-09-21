@@ -51,6 +51,8 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private float stackJitterX = 6f;
         [Tooltip("Random vertical wobble per item, layered on top of its row height.")]
         [SerializeField] private float stackJitterY = 3f;
+        [Tooltip("Row height used instead of Stack Step Height when the mission wants a straight vertical stack (MissionRecipeData.StackVertically) -- kept tighter since a stack can run several items deep with no row-wrap to bound its height.")]
+        [SerializeField] private float verticalStackStepHeight = 10f;
 
         public string IngredientId { get; private set; }
         public IngredientDragMode Mode { get; private set; }
@@ -113,16 +115,16 @@ namespace tmkoc.lunchforbuilders
         }
 
         // Places this token directly at the drop point with no tween -- used for startingIngredients
-        // seeded before the mission's first drop (Mission 4's ice cubes). Same stacked look as a
-        // successfully-dropped token (same pile offset, shrunk scale), just without the fall
-        // animation, so the starting pile reads consistently with ones added later.
-        public void PlaceInstantly(RectTransform dropPoint, int stackIndex)
+        // seeded before the mission's first drop. Same stacked look as a successfully-dropped token
+        // (same pile offset, shrunk scale), just without the fall animation, so the starting pile
+        // reads consistently with ones added later.
+        public void PlaceInstantly(RectTransform dropPoint, int stackIndex, bool stackVertically = false, float scaleMultiplier = 1f)
         {
-            Vector2 stackedOffset = StackedOffset(stackIndex);
+            Vector2 stackedOffset = StackedOffset(stackIndex, stackVertically);
             restParent = dropPoint;
             rectTransform.SetParent(dropPoint, false);
             rectTransform.anchoredPosition = stackedOffset;
-            rectTransform.localScale = Vector3.one * stackedScale;
+            rectTransform.localScale = Vector3.one * (stackedScale * scaleMultiplier);
             restAnchoredPos = stackedOffset;
         }
 
@@ -175,26 +177,30 @@ namespace tmkoc.lunchforbuilders
         // far, so several placed ingredients visibly stack up from the container's base instead of
         // either landing in one exact spot or scattering to a random point that can fall outside the
         // container's actual (non-rectangular) visible art.
-        public void SnapIntoStation(RectTransform dropPoint, int stackIndex)
+        public void SnapIntoStation(RectTransform dropPoint, int stackIndex, bool stackVertically = false, float scaleMultiplier = 1f)
         {
             isLocked = true;
             Vector2 anchorLocalPos = ToLocalAnchoredPos(dropPoint, dragLayer);
             Vector2 rimPos = anchorLocalPos + new Vector2(0f, rimHeightOffset);
-            Vector2 stackedOffset = StackedOffset(stackIndex);
+            Vector2 stackedOffset = StackedOffset(stackIndex, stackVertically);
             Vector2 landedPos = anchorLocalPos + stackedOffset;
-            float rimScale = (1f + stackedScale) * 0.5f;
+            // A mission asking for a slightly bigger resting scale (MissionRecipeData.PlacedScaleMultiplier)
+            // gets that bump on both the mid-air rim pose and the final landed size, so the scale-up
+            // reads as part of the same landing motion rather than a separate pop afterwards.
+            float finalScale = stackedScale * scaleMultiplier;
+            float rimScale = (1f + finalScale) * 0.5f;
 
             rectTransform.DOKill();
             Sequence seq = DOTween.Sequence();
             seq.Append(rectTransform.DOAnchorPos(rimPos, dropToRimDuration).SetEase(Ease.OutQuad));
             seq.Join(rectTransform.DOScale(rimScale, dropToRimDuration));
             seq.Append(rectTransform.DOAnchorPos(landedPos, dropIntoContainerDuration).SetEase(Ease.InQuad));
-            seq.Join(rectTransform.DOScale(stackedScale, dropIntoContainerDuration));
+            seq.Join(rectTransform.DOScale(finalScale, dropIntoContainerDuration));
             seq.OnComplete(() =>
             {
                 rectTransform.SetParent(dropPoint, false);
                 rectTransform.anchoredPosition = stackedOffset;
-                rectTransform.localScale = Vector3.one * stackedScale;
+                rectTransform.localScale = Vector3.one * finalScale;
                 isLocked = false;
                 restParent = dropPoint;
                 restAnchoredPos = stackedOffset;
@@ -248,13 +254,23 @@ namespace tmkoc.lunchforbuilders
         }
 
         // Builds the pile upward from the drop point rather than scattering across a bounding area --
-        // stackIndex is "how many tokens are already resting in the container". Items fill a row left
-        // to right before a new row starts above it, so a recipe needing a dozen-plus units of one
-        // ingredient still tops out at a handful of rows instead of climbing straight out of the
-        // container. Staying close to the drop point (rather than spanning a whole boundary rect) is
-        // what keeps ingredients from ever landing outside the container's actual visible shape.
-        private Vector2 StackedOffset(int stackIndex)
+        // stackIndex is "how many tokens are already resting in the container". Staying close to the
+        // drop point (rather than spanning a whole boundary rect) is what keeps ingredients from
+        // ever landing outside the container's actual visible shape.
+        private Vector2 StackedOffset(int stackIndex, bool stackVertically)
         {
+            if (stackVertically)
+            {
+                // A straight column, centered on the drop point -- e.g. a sandwich's bread/veggie
+                // layers stacking directly on top of each other rather than piling sideways.
+                float vx = UnityEngine.Random.Range(-stackJitterX, stackJitterX);
+                float vy = stackBaseHeight + stackIndex * verticalStackStepHeight + UnityEngine.Random.Range(-stackJitterY, stackJitterY);
+                return new Vector2(vx, vy);
+            }
+
+            // Otherwise items fill a row left to right before a new row starts above it, so a recipe
+            // needing a dozen-plus units of one ingredient still tops out at a handful of rows
+            // instead of climbing straight out of the container.
             int row = stackItemsPerRow > 0 ? stackIndex / stackItemsPerRow : stackIndex;
             int col = stackItemsPerRow > 0 ? stackIndex % stackItemsPerRow : 0;
             float colOffset = (col - (stackItemsPerRow - 1) / 2f) * stackColumnSpacing;

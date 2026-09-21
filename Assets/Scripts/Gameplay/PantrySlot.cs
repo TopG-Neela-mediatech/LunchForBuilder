@@ -44,6 +44,10 @@ namespace tmkoc.lunchforbuilders
             if (canvasGroup == null) return;
             canvasGroup.interactable = interactable;
             canvasGroup.alpha = interactable ? 1f : 0.4f;
+            // interactable alone doesn't stop drags -- OnBeginDrag below is a raw IBeginDragHandler,
+            // not a Selectable, so the EventSystem never consults CanvasGroup.interactable for it.
+            // blocksRaycasts is what actually keeps the raycaster from hitting this slot at all.
+            canvasGroup.blocksRaycasts = interactable;
 
             if (interactable) StartPulse();
             else StopPulse();

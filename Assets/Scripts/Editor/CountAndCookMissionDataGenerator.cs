@@ -82,7 +82,7 @@ namespace tmkoc.lunchforbuilders.Editor
                         new ReqDef("BottomBreadSlice", 1, order: 0),
                         new ReqDef("CucumberSlice", 2, order: 1),
                         new ReqDef("TomatoSlice", 2, order: 2),
-                        new ReqDef("LettuceLeaf", 3, order: 3),
+                        new ReqDef("LettuceLeaf", 1, order: 3),
                         new ReqDef("TopBreadSlice", 1, order: 4),
                     },
                     starting = new ReqDef[0],
@@ -92,17 +92,14 @@ namespace tmkoc.lunchforbuilders.Editor
                 {
                     assetName = "Mission4_OrangeMangoJuice",
                     dishName = "Orange Mango Juice",
-                    rule = LearningRule.SubtractionByRemoval,
+                    rule = LearningRule.DifferentQuantities,
                     requirements = new[]
                     {
                         new ReqDef("OrangeSlice", 8),
                         new ReqDef("MangoChunk", 5),
-                        new ReqDef("IceCube", 2, isRemoval: true),
+                        new ReqDef("IceCube", 2),
                     },
-                    starting = new[]
-                    {
-                        new ReqDef("IceCube", 6),
-                    },
+                    starting = new ReqDef[0],
                     memoryReveal = 0f,
                 },
                 new MissionDef

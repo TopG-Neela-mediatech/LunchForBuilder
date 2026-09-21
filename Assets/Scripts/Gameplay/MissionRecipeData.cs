@@ -24,6 +24,8 @@ namespace tmkoc.lunchforbuilders
         public bool isRemoval;
         [Tooltip("-1 = can be added any time. 0,1,2... = must be completed as the Nth step, in order (Mission 3 only).")]
         public int sequenceOrder = -1;
+        [Tooltip("Multiplies the mission's own Placed Scale Multiplier for just this ingredient -- e.g. a smaller value for a sprite that reads visually bigger than the others at the same scale. 1 = no per-ingredient adjustment.")]
+        public float placedScaleMultiplier = 1f;
     }
 
     [CreateAssetMenu(fileName = "Mission_New", menuName = "Count And Cook/Mission Recipe Data")]
@@ -47,6 +49,14 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private IngredientRequirement[] startingIngredients;
         [Tooltip("Memory missions only: how long the Recipe Card stays visible before flipping face-down.")]
         [SerializeField] private float memoryRevealSeconds = 5f;
+        [Tooltip("Memory missions only: how long a wrong drop briefly re-reveals the recipe for.")]
+        [SerializeField] private float mistakeRevealSeconds = 3f;
+
+        [Header("Ingredient Stacking")]
+        [Tooltip("Stack ingredients in a straight vertical column, directly on top of each other (a sandwich's bread/veggie layers) instead of the default loose row-wrapped pile.")]
+        [SerializeField] private bool stackVertically;
+        [Tooltip("Multiplies the normal placed-in-station scale once an ingredient lands -- a small bump (e.g. 1.15) makes it read clearly without dominating the container. 1 = no change.")]
+        [SerializeField] private float placedScaleMultiplier = 1f;
 
         [Header("Character Reaction")]
         [Tooltip("Default/waiting state shown through the mission, and reverted back to a few seconds after a Sad reaction.")]
@@ -70,6 +80,9 @@ namespace tmkoc.lunchforbuilders
         public IngredientRequirement[] Requirements => requirements;
         public IngredientRequirement[] StartingIngredients => startingIngredients;
         public float MemoryRevealSeconds => memoryRevealSeconds;
+        public float MistakeRevealSeconds => mistakeRevealSeconds;
+        public bool StackVertically => stackVertically;
+        public float PlacedScaleMultiplier => placedScaleMultiplier;
         public Sprite HungryCharacterSprite => hungryCharacterSprite;
         public Sprite SadCharacterSprite => sadCharacterSprite;
         public Sprite HappyCharacterSprite => happyCharacterSprite;

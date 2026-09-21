@@ -18,7 +18,7 @@ MonoBehaviour:
   contentAnchorRestY: 0
   contentAnchorSize: {x: 300, y: 300}
   containerBoundary: 2
-  learningRule: 3
+  learningRule: 1
   requirements:
   - ingredientId: OrangeSlice
     icon: {fileID: 21300000, guid: de8ccbdc618d75946b8a5af55ffa1f7b, type: 3}
@@ -33,16 +33,10 @@ MonoBehaviour:
   - ingredientId: IceCube
     icon: {fileID: 21300000, guid: 8006c3499981c3f44a4ff263a65c1207, type: 3}
     requiredCount: 2
-    isRemoval: 1
-    sequenceOrder: -1
-  startingIngredients:
-  - ingredientId: IceCube
-    icon: {fileID: 21300000, guid: 8006c3499981c3f44a4ff263a65c1207, type: 3}
-    requiredCount: 6
     isRemoval: 0
     sequenceOrder: -1
+  startingIngredients: []
   memoryRevealSeconds: 0
-  peekRevealSeconds: 0
   hungryCharacterSprite: {fileID: 21300000, guid: ef47b747a0fd04046b0ada0006ab77b4, type: 3}
   sadCharacterSprite: {fileID: 21300000, guid: 08ba594a6c07c234292f656f0618e319, type: 3}
   happyCharacterSprite: {fileID: 21300000, guid: 8180f3f647a52c745871fbbf0d525206, type: 3}

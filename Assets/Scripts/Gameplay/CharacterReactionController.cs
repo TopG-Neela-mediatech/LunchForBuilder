@@ -114,10 +114,30 @@ namespace tmkoc.lunchforbuilders
             if (pool == null || pool.Length == 0) return;
             var chosen = pool[Random.Range(0, pool.Length)];
             if (chosen == null) return;
-            // Restart cleanly even if it's still finishing a previous burst.
+
+            // A different random pick than last time (or a happy/sad burst overlapping) would
+            // otherwise leave the previous one still fading out while this one starts -- stop
+            // everything across both pools first so only ever one burst is visible at a time.
+            StopAllParticleBursts();
+
             chosen.gameObject.SetActive(true);
-            chosen.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             chosen.Play();
+        }
+
+        private void StopAllParticleBursts()
+        {
+            StopPool(happyParticles);
+            StopPool(sadParticles);
+        }
+
+        private void StopPool(ParticleSystem[] pool)
+        {
+            if (pool == null) return;
+            foreach (var ps in pool)
+            {
+                if (ps == null) continue;
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
         }
 
         // Called right before the win/lose panel slides up -- these particle systems' renderer
