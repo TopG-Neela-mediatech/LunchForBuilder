@@ -43,6 +43,10 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("How long each individual pantry ingredient's own scale-up (0 -> 1) takes.")]
         [SerializeField] private float draggableScaleInDuration = 0.3f;
 
+        [Header("Ingredient Card Cycle (non-Memory missions)")]
+        [Tooltip("Buffer to let the Recipe Card's flip animation finish before playing that card's own intro VO / unlocking the pantry for it.")]
+        [SerializeField] private float cardFlipTransitionDuration = 0.45f;
+
         [Header("Character Mood")]
         [Tooltip("How long the player can go without touching anything before a Sad particle burst nudges them -- repeats for as long as they stay idle.")]
         [SerializeField] private float idleParticleDelay = 6f;
@@ -92,6 +96,7 @@ namespace tmkoc.lunchforbuilders
         private Coroutine timerRoutine;
         private Coroutine idleParticleRoutine;
         private Coroutine idleSpriteRevertRoutine;
+        private Coroutine cardCycleRoutine;
         private Tween timerPulseTween;
         private Color timerNormalColor;
         private bool timerUrgentActive;
@@ -102,6 +107,7 @@ namespace tmkoc.lunchforbuilders
         private void Awake()
         {
             foreach (var slot in pantrySlots) slot.Init(this, dragLayer);
+            if (recipeCard != null) recipeCard.OnInitialRevealFinished += HandleInitialRevealFinished;
 
             // Rest positions and the canvas they're measured against are captured once, up front --
             // every later reveal computes its off-screen start from these, never from wherever the
@@ -122,9 +128,17 @@ namespace tmkoc.lunchforbuilders
             currentSequenceStep = mission.LearningRule == LearningRule.OrderAndCounting ? 0 : -1;
             removedSoFar.Clear();
             hasCompletedThisMission = false;
+            // Every mission's very first hint is immediate now, not just the whole session's -- a
+            // player on Mission 3 has never needed to demo Mission 3's own first correct action yet.
+            isFirstHintEver = true;
             StopTimer();
             StopIdleParticleTimer();
             StopIdleSpriteRevertTimer();
+            if (cardCycleRoutine != null)
+            {
+                StopCoroutine(cardCycleRoutine);
+                cardCycleRoutine = null;
+            }
 
             if (gameplayRoot != null) gameplayRoot.SetActive(true);
 
@@ -191,13 +205,18 @@ namespace tmkoc.lunchforbuilders
             yield return new WaitForSeconds(introSlideDuration);
             yield return RevealPantrySlotsRoutine();
 
-            UpdatePantryInteractivity();
+            // Nothing is draggable yet -- Memory unlocks once its initial reveal hides
+            // (HandleInitialRevealFinished), every other mission unlocks per-card as CardCycleRoutine
+            // plays each ingredient's own intro below.
+            DisableAllPantrySlots();
             characterReaction?.PlaySadBurst();
             gameManager.SoundManager?.PlayMissionIntro(currentMissionIndex);
             StartTimer();
             RestartIdleParticleTimer();
             RestartIdleSpriteRevertTimer();
-            RaiseProgress();
+
+            if (currentMission.LearningRule != LearningRule.Memory)
+                cardCycleRoutine = StartCoroutine(CardCycleRoutine());
 
             gameManager.InvokeMissionStarted(currentMissionIndex);
             introRoutine = null;
@@ -258,7 +277,13 @@ namespace tmkoc.lunchforbuilders
             }
             timerRoutine = null;
             // The mission is over (lost) -- nothing should still be draggable while the lose VO/
-            // panel-popup delay plays out below.
+            // panel-popup delay plays out below, and CardCycleRoutine (if it's mid-WaitUntil for the
+            // card the player never finished) has nothing left to do.
+            if (cardCycleRoutine != null)
+            {
+                StopCoroutine(cardCycleRoutine);
+                cardCycleRoutine = null;
+            }
             DisableAllPantrySlots();
             // The lose panel is about to slide up -- stop any reaction burst still fading out so it
             // can't render on top of it (its particle renderer sorts above the UI otherwise).
@@ -580,6 +605,13 @@ namespace tmkoc.lunchforbuilders
             }
         }
 
+        // "Removed so far" for a removal requirement, or "placed count" for an add one -- the one
+        // piece of live game state every completion/progress check below is ultimately asking about.
+        private int GetRequirementCurrent(IngredientRequirement req) =>
+            req.isRemoval
+                ? (removedSoFar.TryGetValue(req.ingredientId, out int r) ? r : 0)
+                : station.GetPlacedCount(req.ingredientId);
+
         private void RaiseProgress()
         {
             int placedTotal = 0;
@@ -588,10 +620,7 @@ namespace tmkoc.lunchforbuilders
             for (int i = 0; i < requirements.Length; i++)
             {
                 var req = requirements[i];
-                int current = req.isRemoval
-                    ? (removedSoFar.TryGetValue(req.ingredientId, out int r) ? r : 0)
-                    : station.GetPlacedCount(req.ingredientId);
-                current = Mathf.Min(current, req.requiredCount);
+                int current = Mathf.Min(GetRequirementCurrent(req), req.requiredCount);
                 placedTotal += current;
                 requiredTotal += req.requiredCount;
                 recipeCard?.UpdateRow(i, current, req.requiredCount);
@@ -684,13 +713,60 @@ namespace tmkoc.lunchforbuilders
         private bool IsRecipeComplete()
         {
             foreach (var req in currentMission.Requirements)
-            {
-                int current = req.isRemoval
-                    ? (removedSoFar.TryGetValue(req.ingredientId, out int r) ? r : 0)
-                    : station.GetPlacedCount(req.ingredientId);
-                if (current < req.requiredCount) return false;
-            }
+                if (GetRequirementCurrent(req) < req.requiredCount) return false;
             return true;
+        }
+
+        // Memory only -- HandleInitialRevealFinished unlocks the pantry once the "memorize this"
+        // reveal actually hides. Guarded by mission type since this event only ever fires from
+        // RecipeCardController's own Memory-only reveal routine, but a stray call should still no-op
+        // safely rather than assume currentMission is still the one that subscribed.
+        private void HandleInitialRevealFinished()
+        {
+            if (currentMission == null || currentMission.LearningRule != LearningRule.Memory) return;
+            UpdatePantryInteractivity();
+            RefreshTutorialHint();
+        }
+
+        // Drives the Recipe Card through its ingredients one at a time for every non-Memory mission:
+        // flip to the next card, play its intro VO and unlock the pantry for it (skipping the intro
+        // entirely if the player already finished it earlier while a different card was showing),
+        // wait for it to actually be completed, lock the pantry again, play its outro VO, repeat.
+        // The very last card skips its own outro -- it would collide with AutoServe's own mission-
+        // outro VO, which fires on the very same drop via RaiseProgress, on the same audio source.
+        private IEnumerator CardCycleRoutine()
+        {
+            var requirements = currentMission.Requirements;
+            for (int cardIndex = 0; cardIndex < requirements.Length; cardIndex++)
+            {
+                var req = requirements[cardIndex];
+                bool isLastCard = cardIndex == requirements.Length - 1;
+
+                if (cardIndex > 0)
+                {
+                    recipeCard?.ShowCard(cardIndex);
+                    yield return new WaitForSeconds(cardFlipTransitionDuration);
+                }
+
+                if (GetRequirementCurrent(req) < req.requiredCount)
+                {
+                    gameManager.SoundManager?.PlayCardIntro(req.ingredientId);
+                    UpdatePantryInteractivity();
+                    RefreshTutorialHint();
+
+                    yield return new WaitUntil(() => GetRequirementCurrent(req) >= req.requiredCount);
+
+                    gameManager.TutorialManager?.CancelHint();
+                    DisableAllPantrySlots();
+                }
+
+                if (!isLastCard)
+                {
+                    float len = gameManager.SoundManager != null ? gameManager.SoundManager.PlayCardOutro(req.ingredientId) : -1f;
+                    if (len > 0f) yield return new WaitForSeconds(len);
+                }
+            }
+            cardCycleRoutine = null;
         }
 
         // The win punch and confetti already fired in AutoServe, right as the dish swapped to its
@@ -739,6 +815,7 @@ namespace tmkoc.lunchforbuilders
 
         private void OnDestroy()
         {
+            if (recipeCard != null) recipeCard.OnInitialRevealFinished -= HandleInitialRevealFinished;
             timerPulseTween?.Kill();
         }
     }

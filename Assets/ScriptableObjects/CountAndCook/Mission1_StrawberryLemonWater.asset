@@ -15,7 +15,7 @@ MonoBehaviour:
   dishName: Strawberry Lemon Water
   stationIcon: {fileID: 21300000, guid: ffec4052ee6c1dd45855cb71ccd08656, type: 3}
   completedRecipeSprite: {fileID: 21300000, guid: c30fab172ce7c4c4fbe454da1763d391, type: 3}
-  contentAnchorRestY: 0
+  contentAnchorRestY: 25
   contentAnchorSize: {x: 300, y: 300}
   containerBoundary: 1
   learningRule: 0
@@ -25,19 +25,24 @@ MonoBehaviour:
     requiredCount: 6
     isRemoval: 0
     sequenceOrder: -1
+    placedScaleMultiplier: 1
   - ingredientId: LemonSlice
     icon: {fileID: 21300000, guid: 7ef040ae28964ca48aa37d46209776ba, type: 3}
     requiredCount: 6
     isRemoval: 0
     sequenceOrder: -1
+    placedScaleMultiplier: 1
   - ingredientId: Strawberry
     icon: {fileID: 21300000, guid: 39daee5c5c35fb94c9904a7b05aaef20, type: 3}
     requiredCount: 6
     isRemoval: 0
     sequenceOrder: -1
+    placedScaleMultiplier: 1
   startingIngredients: []
   memoryRevealSeconds: 0
-  peekRevealSeconds: 0
+  mistakeRevealSeconds: 3
+  stackVertically: 0
+  placedScaleMultiplier: 1
   hungryCharacterSprite: {fileID: 21300000, guid: ef47b747a0fd04046b0ada0006ab77b4, type: 3}
   sadCharacterSprite: {fileID: 21300000, guid: 08ba594a6c07c234292f656f0618e319, type: 3}
   happyCharacterSprite: {fileID: 21300000, guid: 8180f3f647a52c745871fbbf0d525206, type: 3}

@@ -65,6 +65,10 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("How long the progress fill bar takes to animate to its new amount every time the count changes.")]
         [SerializeField] private float fillBarTweenDuration = 0.3f;
 
+        // Memory only -- fires once the initial "memorize this" reveal actually hides, so
+        // CookingManager knows it's safe to unlock the pantry.
+        public event Action OnInitialRevealFinished;
+
         private MissionRecipeData mission;
         private Coroutine memoryRoutine;
         // Bookkeeping per requirement (index-aligned with mission.Requirements), kept regardless of
@@ -218,8 +222,6 @@ namespace tmkoc.lunchforbuilders
             }
 
             if (increased) PlayTickEffect(ingredientIcon, current >= required);
-
-            if (current >= required) AdvanceToNextIncompleteRow();
         }
 
         private void UpdateMultiRowVisual(int index, int current, int required, bool increased)
@@ -248,24 +250,15 @@ namespace tmkoc.lunchforbuilders
             if (increased) PlayTickEffect(rows[index].icon, current >= required);
         }
 
-        // Finds the next in-use ingredient after the one just finished and flips the card to it. If
-        // there isn't one, this was the last ingredient -- stays showing it; CookingManager's own
-        // win celebration takes over from here once the whole recipe is done.
-        private void AdvanceToNextIncompleteRow()
+        // CookingManager owns the decision of WHEN to advance (it plays an intro VO, waits for the
+        // ingredient to actually be completed, plays an outro VO, then calls this) -- this just does
+        // the flip itself, the same pinch feel as ShowFace's front/back animation but on the single
+        // shared display root: shrink it to nothing on its own X axis, swap in the new ingredient's
+        // name/icon/counter/fill at that pinch point, then grow it back out.
+        public void ShowCard(int newIndex)
         {
-            for (int i = currentDisplayIndex + 1; i < rows.Length; i++)
-            {
-                if (!rowInUse[i]) continue;
-                FlipToRequirement(i);
-                return;
-            }
-        }
+            if (showAllRowsAtOnce || mission == null || newIndex < 0 || newIndex >= rows.Length) return;
 
-        // Same pinch-flip feel as ShowFace's front/back animation, but on the single shared display
-        // root -- shrink it to nothing on its own X axis, swap in the next ingredient's name/icon/
-        // counter/fill at that pinch point, then grow it back out.
-        private void FlipToRequirement(int newIndex)
-        {
             if (singleDisplayRoot == null)
             {
                 ApplySingleDisplay(newIndex);
@@ -370,6 +363,9 @@ namespace tmkoc.lunchforbuilders
             yield return new WaitForSeconds(mission.MemoryRevealSeconds);
             ShowFace(false);
             memoryRoutine = null;
+            // Lets CookingManager keep the pantry locked for as long as the recipe is up on screen
+            // to memorize -- dragging only makes sense once there's nothing left to look at.
+            OnInitialRevealFinished?.Invoke();
         }
 
         // Memory missions only (a no-op everywhere else) -- a wrong drop briefly re-reveals the

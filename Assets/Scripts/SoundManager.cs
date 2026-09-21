@@ -89,6 +89,23 @@ namespace tmkoc.lunchforbuilders
             return -1f;
         }
 
+        // ---- Recipe Card ingredient intro ("Let's add some Ice Cubes!") -- played the moment a new
+        // ingredient's card becomes the one showing, as long as it isn't already finished (see
+        // CookingManager.CardCycleRoutine, which skips this call entirely in that case). ----
+        public float PlayCardIntro(string ingredientId) => PlayFromVoiceEntries(audioMapper.cardIntros, ingredientId);
+
+        // ---- Recipe Card ingredient outro ("Ice Cubes added!") -- played once that ingredient's
+        // requirement is actually met, right before the card flips to the next one. ----
+        public float PlayCardOutro(string ingredientId) => PlayFromVoiceEntries(audioMapper.cardOutros, ingredientId);
+
+        private float PlayFromVoiceEntries(IngredientVoiceEntry[] entries, string ingredientId)
+        {
+            if (entries == null || RuntimeAudioLoader.Instance == null) return -1f;
+            foreach (var entry in entries)
+                if (entry.ingredientId == ingredientId) return RuntimeAudioLoader.Instance.PlayRuntimeAudio(entry.key);
+            return -1f;
+        }
+
         // ---- Idle nudge (random variant), repeats for as long as the player stays idle ----
         public float PlayIdleNudge()
         {
@@ -177,5 +194,53 @@ namespace tmkoc.lunchforbuilders
 
         [Header("Idle Nudge (random variant)")]
         public string[] idleNudges = { "idle_nudge_1", "idle_nudge_2", "idle_nudge_3" };
+
+        [Header("Recipe Card Ingredient Intro (\"Let's add some Ice Cubes!\")")]
+        public IngredientVoiceEntry[] cardIntros =
+        {
+            new IngredientVoiceEntry { ingredientId = "IceCube", key = "card_intro_IceCube" },
+            new IngredientVoiceEntry { ingredientId = "LemonSlice", key = "card_intro_LemonSlice" },
+            new IngredientVoiceEntry { ingredientId = "Strawberry", key = "card_intro_Strawberry" },
+            new IngredientVoiceEntry { ingredientId = "BroccoliPiece", key = "card_intro_BroccoliPiece" },
+            new IngredientVoiceEntry { ingredientId = "TomatoPiece", key = "card_intro_TomatoPiece" },
+            new IngredientVoiceEntry { ingredientId = "CornPiece", key = "card_intro_CornPiece" },
+            new IngredientVoiceEntry { ingredientId = "BellPepperPiece", key = "card_intro_BellPepperPiece" },
+            new IngredientVoiceEntry { ingredientId = "BottomBreadSlice", key = "card_intro_BottomBreadSlice" },
+            new IngredientVoiceEntry { ingredientId = "CucumberSlice", key = "card_intro_CucumberSlice" },
+            new IngredientVoiceEntry { ingredientId = "TomatoSlice", key = "card_intro_TomatoSlice" },
+            new IngredientVoiceEntry { ingredientId = "LettuceLeaf", key = "card_intro_LettuceLeaf" },
+            new IngredientVoiceEntry { ingredientId = "TopBreadSlice", key = "card_intro_TopBreadSlice" },
+            new IngredientVoiceEntry { ingredientId = "OrangeSlice", key = "card_intro_OrangeSlice" },
+            new IngredientVoiceEntry { ingredientId = "MangoChunk", key = "card_intro_MangoChunk" },
+            new IngredientVoiceEntry { ingredientId = "ApplePiece", key = "card_intro_ApplePiece" },
+            new IngredientVoiceEntry { ingredientId = "BananaSlice", key = "card_intro_BananaSlice" },
+            new IngredientVoiceEntry { ingredientId = "Grapes", key = "card_intro_Grapes" },
+            new IngredientVoiceEntry { ingredientId = "StrawberryPiece", key = "card_intro_StrawberryPiece" },
+            new IngredientVoiceEntry { ingredientId = "SpoonYogurt", key = "card_intro_SpoonYogurt" },
+        };
+
+        [Header("Recipe Card Ingredient Outro (\"Ice Cubes added!\")")]
+        public IngredientVoiceEntry[] cardOutros =
+        {
+            new IngredientVoiceEntry { ingredientId = "IceCube", key = "card_outro_IceCube" },
+            new IngredientVoiceEntry { ingredientId = "LemonSlice", key = "card_outro_LemonSlice" },
+            new IngredientVoiceEntry { ingredientId = "Strawberry", key = "card_outro_Strawberry" },
+            new IngredientVoiceEntry { ingredientId = "BroccoliPiece", key = "card_outro_BroccoliPiece" },
+            new IngredientVoiceEntry { ingredientId = "TomatoPiece", key = "card_outro_TomatoPiece" },
+            new IngredientVoiceEntry { ingredientId = "CornPiece", key = "card_outro_CornPiece" },
+            new IngredientVoiceEntry { ingredientId = "BellPepperPiece", key = "card_outro_BellPepperPiece" },
+            new IngredientVoiceEntry { ingredientId = "BottomBreadSlice", key = "card_outro_BottomBreadSlice" },
+            new IngredientVoiceEntry { ingredientId = "CucumberSlice", key = "card_outro_CucumberSlice" },
+            new IngredientVoiceEntry { ingredientId = "TomatoSlice", key = "card_outro_TomatoSlice" },
+            new IngredientVoiceEntry { ingredientId = "LettuceLeaf", key = "card_outro_LettuceLeaf" },
+            new IngredientVoiceEntry { ingredientId = "TopBreadSlice", key = "card_outro_TopBreadSlice" },
+            new IngredientVoiceEntry { ingredientId = "OrangeSlice", key = "card_outro_OrangeSlice" },
+            new IngredientVoiceEntry { ingredientId = "MangoChunk", key = "card_outro_MangoChunk" },
+            new IngredientVoiceEntry { ingredientId = "ApplePiece", key = "card_outro_ApplePiece" },
+            new IngredientVoiceEntry { ingredientId = "BananaSlice", key = "card_outro_BananaSlice" },
+            new IngredientVoiceEntry { ingredientId = "Grapes", key = "card_outro_Grapes" },
+            new IngredientVoiceEntry { ingredientId = "StrawberryPiece", key = "card_outro_StrawberryPiece" },
+            new IngredientVoiceEntry { ingredientId = "SpoonYogurt", key = "card_outro_SpoonYogurt" },
+        };
     }
 }
