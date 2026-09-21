@@ -210,10 +210,16 @@ namespace tmkoc.lunchforbuilders
             // plays each ingredient's own intro below.
             DisableAllPantrySlots();
             characterReaction?.PlaySadBurst();
-            gameManager.SoundManager?.PlayMissionIntro(currentMissionIndex);
+            float missionIntroLen = gameManager.SoundManager != null ? gameManager.SoundManager.PlayMissionIntro(currentMissionIndex) : -1f;
             StartTimer();
             RestartIdleParticleTimer();
             RestartIdleSpriteRevertTimer();
+
+            // Let the mission intro line ("Let's make a yummy Salad!") actually finish before the
+            // first ingredient card's own intro starts -- both share the same audio source, and
+            // starting the card intro right away would immediately Stop() the mission intro line
+            // before it's even audible.
+            if (missionIntroLen > 0f) yield return new WaitForSeconds(missionIntroLen);
 
             if (currentMission.LearningRule != LearningRule.Memory)
                 cardCycleRoutine = StartCoroutine(CardCycleRoutine());

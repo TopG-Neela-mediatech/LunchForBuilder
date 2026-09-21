@@ -15,7 +15,7 @@ MonoBehaviour:
   slides:
   - backgroundSprite: {fileID: 21300000, guid: e0ddde8c3d2c1334f808ef9b8079740c, type: 3}
     foregroundSprite: {fileID: 21300000, guid: f09ba26d6c17eac45953a3036c783207, type: 3}
-    captionText: The kids are excited to play at the playground!
+    captionText: The Gokuldham Playground needs some repairs! Let's see what happened.
     displayDuration: 3
     transitionIn: 0
     transitionOut: 1
@@ -23,7 +23,7 @@ MonoBehaviour:
     slideEnterSFX: {fileID: 0}
   - backgroundSprite: {fileID: 21300000, guid: e0ddde8c3d2c1334f808ef9b8079740c, type: 3}
     foregroundSprite: {fileID: 21300000, guid: 4463b2b66644c3146b46da47b755e305, type: 3}
-    captionText: Oh no! The workers are hungry and thirsty.
+    captionText: The workers are hungry and tired after working hard!
     displayDuration: 3
     transitionIn: 0
     transitionOut: 1
@@ -31,7 +31,8 @@ MonoBehaviour:
     slideEnterSFX: {fileID: 0}
   - backgroundSprite: {fileID: 21300000, guid: e0ddde8c3d2c1334f808ef9b8079740c, type: 3}
     foregroundSprite: {fileID: 21300000, guid: d355406d15af1ec4ca7f0d0a059baadd, type: 3}
-    captionText: "Let\u2019s help them with some food and drinks!"
+    captionText: Let's prepare some healthy food and drinks for them to help them
+      get their energy back!
     displayDuration: 3
     transitionIn: 0
     transitionOut: 1
