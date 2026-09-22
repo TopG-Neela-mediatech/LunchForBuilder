@@ -1,0 +1,20 @@
+{
+    "items": [
+        {
+            "k": "ServerRoot",
+            "v": "\\\\NAS\\Gaming\\AssetBundlesStorage"
+        },
+        {
+            "k": "GameName",
+            "v": "countandcook"
+        },
+        {
+            "k": "AssetBundleFolder",
+            "v": "D:/UnityProjects/LunchForBuilder/AssetBundle"
+        },
+        {
+            "k": "ScriptList",
+            "v": "Assets/Scripts"
+        }
+    ]
+}
