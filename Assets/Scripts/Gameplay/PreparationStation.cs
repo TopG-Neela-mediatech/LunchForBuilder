@@ -16,6 +16,8 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private RectTransform dropArea;
         [Tooltip("Where placed tokens are anchored/parented once they snap in.")]
         [SerializeField] private RectTransform contentAnchor;
+        [Tooltip("Extra margin (all sides) added to the container's hit-test area when deciding whether a drop landed on the station. A vertically-stacked pile (MissionRecipeData.StackVertically, e.g. the sandwich) grows taller with every layer, so without this a player aiming at the current top of the stack could land just outside the container art's own tight rect and get bounced for no clear reason.")]
+        [SerializeField] private float dropHitTestPadding = 60f;
 
         [Header("Container Drop Points")]
         [Tooltip("Already children of Content Anchor -- each marks the BOTTOM of one container's actual visible art (base of the plate/jug), not a bounding area. Ingredients land at whichever one the current mission selects (MissionRecipeData.ContainerBoundary) and pile upward from that single point, so they can never land outside the container's visible shape the way a random point-in-a-bounding-rect could.")]
@@ -28,6 +30,12 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private Color idleGlowColor = Color.white;
         [SerializeField] private Color hoverValidColor = new Color(0.4f, 1f, 0.4f);
         [SerializeField] private Color hoverInvalidColor = new Color(1f, 0.4f, 0.4f);
+        [Tooltip("The jug/plate/glass itself wobbles on every drop, correct or not -- physical feedback that something just happened, separate from the token's own shake/bounce.")]
+        [SerializeField] private float dropShakeDuration = 0.3f;
+        [SerializeField] private float dropShakeStrength = 12f;
+        [SerializeField] private int dropShakeVibrato = 8;
+
+        private Tween dropShakeTween;
 
         [Tooltip("Swapped to the current mission's jug/plate/blender/bowl sprite -- one shared Preparation Station renders every mission's container.")]
         [SerializeField] private Image contentImage;
@@ -56,11 +64,21 @@ namespace tmkoc.lunchforbuilders
 
         // The station icon (jug/plate/etc.) is what the player actually sees as "the container", so
         // that's what a drop is tested against once it's assigned -- dropArea is only a fallback for
-        // before contentImage is wired up.
+        // before contentImage is wired up. The tested rect is padded out by dropHitTestPadding on
+        // every side, so a player doesn't have to land precisely inside the container art's own
+        // bounds -- important once a pile has grown taller than that art (a vertical stack especially).
         public bool ContainsScreenPoint(Vector2 screenPoint, Camera cam)
         {
             RectTransform target = contentImage != null ? contentImage.rectTransform : dropArea;
-            return target != null && RectTransformUtility.RectangleContainsScreenPoint(target, screenPoint, cam);
+            if (target == null) return false;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(target, screenPoint, cam, out Vector2 localPoint)) return false;
+
+            Rect padded = target.rect;
+            padded.xMin -= dropHitTestPadding;
+            padded.xMax += dropHitTestPadding;
+            padded.yMin -= dropHitTestPadding;
+            padded.yMax += dropHitTestPadding;
+            return padded.Contains(localPoint);
         }
 
         public int GetPlacedCount(string ingredientId) => placedCounts.TryGetValue(ingredientId, out int count) ? count : 0;
@@ -143,6 +161,15 @@ namespace tmkoc.lunchforbuilders
             if (glowImage == null) return;
             glowImage.DOKill();
             glowImage.DOColor(active ? (valid ? hoverValidColor : hoverInvalidColor) : idleGlowColor, 0.15f);
+        }
+
+        // Shakes the container itself (jug/plate/glass), called on every resolved drop regardless of
+        // whether it was correct -- a physical "something just happened here" wobble.
+        public void PlayDropShake()
+        {
+            if (contentImage == null) return;
+            dropShakeTween?.Kill();
+            dropShakeTween = contentImage.rectTransform.DOShakeAnchorPos(dropShakeDuration, strength: dropShakeStrength, vibrato: dropShakeVibrato);
         }
     }
 }

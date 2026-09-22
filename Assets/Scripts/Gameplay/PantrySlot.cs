@@ -43,7 +43,10 @@ namespace tmkoc.lunchforbuilders
         {
             if (canvasGroup == null) return;
             canvasGroup.interactable = interactable;
-            canvasGroup.alpha = interactable ? 1f : 0.4f;
+            // Alpha deliberately stays at 1 regardless of interactable state -- dimming everything
+            // except the current card's ingredient would let the player just spot the "highlighted"
+            // one instead of actually reading the Recipe Card to know what to drag.
+            canvasGroup.alpha = 1f;
             // interactable alone doesn't stop drags -- OnBeginDrag below is a raw IBeginDragHandler,
             // not a Selectable, so the EventSystem never consults CanvasGroup.interactable for it.
             // blocksRaycasts is what actually keeps the raycaster from hitting this slot at all.

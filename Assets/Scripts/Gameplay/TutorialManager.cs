@@ -26,10 +26,16 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private float tapPressOffset = 18f;
         [Tooltip("Pause at each end of the loop (hand back at the start / hand back at rest) before repeating.")]
         [SerializeField] private float loopPauseDuration = 0.3f;
+        [Tooltip("How many times the hand demo repeats before hiding itself and waiting out the idle delay again, rather than looping forever until the player touches something.")]
+        [SerializeField] private int hintLoopCount = 3;
 
         private RectTransform handParent;
         private Coroutine waitRoutine;
         private Sequence handSequence;
+        // What to re-play once a hint's loops finish naturally (not cancelled by the player) and the
+        // idle delay has been waited out again -- set fresh by every ShowAddHint/ShowRemoveHint/
+        // ShowTapHint call, so the repeating cycle always demonstrates the CURRENT next correct action.
+        private Action currentHintAction;
 
         private void Awake()
         {
@@ -64,20 +70,31 @@ namespace tmkoc.lunchforbuilders
         private void RestartWait(Action playHint, bool immediate)
         {
             CancelHint();
+            currentHintAction = playHint;
             if (handImage == null || handParent == null) return;
             waitRoutine = StartCoroutine(WaitThenShowRoutine(playHint, immediate ? 0f : idleDelay));
         }
 
         // Waits out the idle delay (or not at all, for the session's very first hint), then starts
-        // the hint animation -- which loops on its own (DOTween SetLoops(-1)) for as long as it stays
-        // the "next correct action". CookingManager calls CancelHint the instant the player actually
-        // does something, then immediately asks for a fresh hint pointed at whatever the new next
-        // action is, so this never needs to re-wait/re-show on its own.
+        // the hint animation -- which plays hintLoopCount times (DOTween SetLoops) and then calls
+        // RestartIdleCycle on its own. CookingManager calls CancelHint the instant the player
+        // actually does something, then immediately asks for a fresh hint pointed at whatever the
+        // new next action is, so this never needs to re-wait/re-show on its own for THAT case.
         private IEnumerator WaitThenShowRoutine(Action playHint, float delay)
         {
             if (delay > 0f) yield return new WaitForSeconds(delay);
             playHint();
             waitRoutine = null;
+        }
+
+        // Called once a hint's loops finish on their own (the player never acted) -- hides the hand
+        // and waits out the full idle delay again before repeating the same demo, instead of the
+        // hand just sitting there forever after the loops run out, or looping without end.
+        private void RestartIdleCycle()
+        {
+            HideHand();
+            if (currentHintAction == null) return;
+            waitRoutine = StartCoroutine(WaitThenShowRoutine(currentHintAction, idleDelay));
         }
 
         private void HideHand()
@@ -88,9 +105,9 @@ namespace tmkoc.lunchforbuilders
             handImage.localScale = Vector3.one;
         }
 
-        // Drags from start to end, pauses, snaps back to start, pauses, and repeats forever --
-        // SetLoops(-1) keeps this going until CancelHint() kills the sequence, so the player sees the
-        // same drag demonstrated over and over rather than just once.
+        // Drags from start to end, pauses, snaps back to start, pauses, and repeats hintLoopCount
+        // times -- then RestartIdleCycle hides the hand and waits out the idle delay again, rather
+        // than looping forever until the player touches something.
         private void PlayDragHint(RectTransform from, RectTransform to)
         {
             if (from == null || to == null) return;
@@ -106,7 +123,8 @@ namespace tmkoc.lunchforbuilders
             handSequence.AppendInterval(loopPauseDuration);
             handSequence.AppendCallback(() => handImage.anchoredPosition = start);
             handSequence.AppendInterval(loopPauseDuration);
-            handSequence.SetLoops(-1);
+            handSequence.SetLoops(hintLoopCount);
+            handSequence.OnComplete(RestartIdleCycle);
         }
 
         private void PlayRemoveHint(RectTransform from)
@@ -124,7 +142,8 @@ namespace tmkoc.lunchforbuilders
             handSequence.AppendInterval(loopPauseDuration);
             handSequence.AppendCallback(() => handImage.anchoredPosition = start);
             handSequence.AppendInterval(loopPauseDuration);
-            handSequence.SetLoops(-1);
+            handSequence.SetLoops(hintLoopCount);
+            handSequence.OnComplete(RestartIdleCycle);
         }
 
         // Hand pops onto the target and mimes two quick presses -- reads as "tap here" far more
@@ -144,7 +163,8 @@ namespace tmkoc.lunchforbuilders
             handSequence.AppendInterval(0.15f);
             AppendTapPress(handSequence, restPos, pressPos);
             handSequence.AppendInterval(loopPauseDuration + 0.2f);
-            handSequence.SetLoops(-1);
+            handSequence.SetLoops(hintLoopCount);
+            handSequence.OnComplete(RestartIdleCycle);
         }
 
         private void AppendTapPress(Sequence seq, Vector2 restPos, Vector2 pressPos)

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using AssetKits.ParticleImage;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -47,6 +48,10 @@ namespace tmkoc.lunchforbuilders
         [Tooltip("Buffer to let the Recipe Card's flip animation finish before playing that card's own intro VO / unlocking the pantry for it.")]
         [SerializeField] private float cardFlipTransitionDuration = 0.45f;
 
+        [Header("Container Feedback")]
+        [Tooltip("A placed ingredient's alpha once it's inside a jug/glass container (Strawberry Lemonade, Orange Mango Juice) -- a subtle 'submerged in the liquid' cue. Plate-based missions (Salad, Sandwich, Fruit Bowl) stay fully opaque at 1.")]
+        [SerializeField] private float submergedAlpha = 0.75f;
+
         [Header("Character Mood")]
         [Tooltip("How long the player can go without touching anything before a Sad particle burst nudges them -- repeats for as long as they stay idle.")]
         [SerializeField] private float idleParticleDelay = 6f;
@@ -59,6 +64,7 @@ namespace tmkoc.lunchforbuilders
         [SerializeField] private float winPunchDuration = 0.4f;
         [Tooltip("How long the confetti gets to burst on screen before the win panel slides up and covers it.")]
         [SerializeField] private float confettiLeadTime = 0.6f;
+        [SerializeField] private ParticleImage ignredientCompletedEffect;
 
         [Header("Timer Urgency")]
         [Tooltip("Once the countdown drops to/below this many seconds, the timer text pulses and turns red -- a wordless 'hurry up' cue.")]
@@ -70,6 +76,11 @@ namespace tmkoc.lunchforbuilders
         private MissionRecipeData currentMission;
         private int currentMissionIndex;
         private int currentSequenceStep;
+        // Which requirement index CardCycleRoutine currently has on display -- for every mission
+        // except Memory, this is the ONLY ingredient FindActiveRequirement will accept right now
+        // (see FindActiveRequirement), so adding stays strictly in the same order the Recipe Card
+        // shows it, not just whatever's still outstanding.
+        private int currentCardIndex;
         private readonly Dictionary<string, int> removedSoFar = new Dictionary<string, int>();
 
         // Only the very first hint shown in the whole play session is immediate (the player hasn't
@@ -126,6 +137,7 @@ namespace tmkoc.lunchforbuilders
             currentMission = mission;
             currentMissionIndex = missionIndex;
             currentSequenceStep = mission.LearningRule == LearningRule.OrderAndCounting ? 0 : -1;
+            currentCardIndex = 0;
             removedSoFar.Clear();
             hasCompletedThisMission = false;
             // Every mission's very first hint is immediate now, not just the whole session's -- a
@@ -215,14 +227,12 @@ namespace tmkoc.lunchforbuilders
             RestartIdleParticleTimer();
             RestartIdleSpriteRevertTimer();
 
-            // Let the mission intro line ("Let's make a yummy Salad!") actually finish before the
-            // first ingredient card's own intro starts -- both share the same audio source, and
-            // starting the card intro right away would immediately Stop() the mission intro line
-            // before it's even audible.
-            if (missionIntroLen > 0f) yield return new WaitForSeconds(missionIntroLen);
-
+            // CardCycleRoutine starts (and unlocks the pantry) right away -- dragging must never sit
+            // blocked just because a VO line is still playing. It still waits out the mission intro's
+            // own length before playing card 0's own intro line specifically, so the two don't stomp
+            // each other on the shared audio source.
             if (currentMission.LearningRule != LearningRule.Memory)
-                cardCycleRoutine = StartCoroutine(CardCycleRoutine());
+                cardCycleRoutine = StartCoroutine(CardCycleRoutine(Mathf.Max(missionIntroLen, 0f)));
 
             gameManager.InvokeMissionStarted(currentMissionIndex);
             introRoutine = null;
@@ -407,6 +417,11 @@ namespace tmkoc.lunchforbuilders
             return restPos + new Vector2(0f, -offsetY);
         }
 
+        // Plate-based missions (Salad, Sandwich, Fruit Bowl) stay fully opaque; the two jug/glass
+        // missions (Strawberry Lemonade, Orange Mango Juice) dim placed ingredients to read as
+        // sitting inside the liquid rather than floating on top of it.
+        private float PlacedAlphaForCurrentMission => currentMission.ContainerBoundary != ContainerBoundary.Plate ? submergedAlpha : 1f;
+
         private void SeedStartingIngredients()
         {
             if (currentMission.StartingIngredients == null) return;
@@ -419,7 +434,7 @@ namespace tmkoc.lunchforbuilders
                     var token = slot.SpawnPlacedToken(this, dragLayer);
                     if (token == null) continue;
                     float startingScale = currentMission.PlacedScaleMultiplier * starting.placedScaleMultiplier;
-                    token.PlaceInstantly(activeDropPoint, station.TotalPlacedCount, currentMission.StackVertically, startingScale);
+                    token.PlaceInstantly(activeDropPoint, station.TotalPlacedCount, currentMission.StackVertically, startingScale, PlacedAlphaForCurrentMission);
                     station.RegisterPlaced(starting.ingredientId, token);
                 }
             }
@@ -466,6 +481,10 @@ namespace tmkoc.lunchforbuilders
                 : ResolveRemove(token, overStation);
             bool justCompletedMission = !wasCompletedBefore && hasCompletedThisMission;
 
+            // The container itself reacts to every drop, correct or not -- a shake/wobble the player
+            // feels regardless of which way it went.
+            station.PlayDropShake();
+
             if (success)
             {
                 characterReaction?.SetSprite(CharacterMood.Happy);
@@ -474,12 +493,13 @@ namespace tmkoc.lunchforbuilders
             }
             else
             {
+                // The recipe reacts first (Memory missions only -- a wrong drop briefly re-reveals
+                // the recipe as a free reminder; a no-op everywhere else), THEN the character -- so
+                // the player sees the reminder appear before the sad reaction, not after.
+                recipeCard?.NotifyIncorrectDrop();
                 characterReaction?.SetSprite(CharacterMood.Sad);
                 characterReaction?.PlaySadBurst();
                 gameManager.SoundManager?.PlaySFX(sfxEnum.Incorrect);
-                // Memory missions only (a no-op everywhere else) -- a wrong drop briefly re-reveals
-                // the recipe as a free reminder, instead of the mistake just being unexplained.
-                recipeCard?.NotifyIncorrectDrop();
             }
 
             gameManager.InvokeIngredientResolved(token.IngredientId, success);
@@ -495,7 +515,7 @@ namespace tmkoc.lunchforbuilders
                 int stackIndex = station.TotalPlacedCount;
                 station.RegisterPlaced(token.IngredientId, token);
                 float placedScale = currentMission.PlacedScaleMultiplier * requirement.placedScaleMultiplier;
-                token.SnapIntoStation(activeDropPoint, stackIndex, currentMission.StackVertically, placedScale);
+                token.SnapIntoStation(activeDropPoint, stackIndex, currentMission.StackVertically, placedScale, PlacedAlphaForCurrentMission);
                 AdvanceSequenceIfStepComplete(requirement);
                 RaiseProgress();
             }
@@ -530,12 +550,20 @@ namespace tmkoc.lunchforbuilders
         // (OrderAndCounting) mission, only when it's the current step -- everything else (wrong
         // ingredient, wrong step, or already at quota since a satisfied requirement stops matching
         // once GetPlacedCount reaches requiredCount) returns null, which ResolveAdd treats as a bounce.
+        // For every mission except Memory, the ingredient must also be the one the Recipe Card is
+        // CURRENTLY showing (currentCardIndex) -- adding ahead of the card, even something the
+        // recipe genuinely still needs later, isn't allowed. Memory shows its whole list at once and
+        // was never card-cycled to begin with, so it keeps free-order adding.
         private IngredientRequirement FindActiveRequirement(string ingredientId)
         {
-            foreach (var req in currentMission.Requirements)
+            var requirements = currentMission.Requirements;
+            bool isMemory = currentMission.LearningRule == LearningRule.Memory;
+            for (int i = 0; i < requirements.Length; i++)
             {
+                var req = requirements[i];
                 if (req.isRemoval || req.ingredientId != ingredientId) continue;
                 if (req.sequenceOrder >= 0 && req.sequenceOrder != currentSequenceStep) continue;
+                if (!isMemory && i != currentCardIndex) continue;
                 if (station.GetPlacedCount(ingredientId) >= req.requiredCount) continue;
                 return req;
             }
@@ -558,6 +586,22 @@ namespace tmkoc.lunchforbuilders
             UpdatePantryInteractivity();
         }
 
+        // Some ingredients are just a different FORM of the same thing rather than a genuinely
+        // different item -- "Strawberry" (whole, Mission 1) and "StrawberryPiece" (cut, Mission 5)
+        // look like the same fruit to a child even though they're different ingredientIds, so a
+        // decoy picked by exact-ID matching alone could put both on the shelf: one that's actually
+        // correct and one that looks identical but silently bounces. Stripping a known "form" suffix
+        // gets back to the shared root ("Strawberry") so decoys can be matched on that instead.
+        private static readonly string[] IngredientFormSuffixes = { "Piece", "Slice", "Chunk", "Leaf", "Cube" };
+
+        private static string GetIngredientBaseName(string ingredientId)
+        {
+            foreach (var suffix in IngredientFormSuffixes)
+                if (ingredientId.Length > suffix.Length && ingredientId.EndsWith(suffix))
+                    return ingredientId.Substring(0, ingredientId.Length - suffix.Length);
+            return ingredientId;
+        }
+
         // All 5 missions share one scene/pantry tray, so a pantry slot must be hidden entirely
         // whenever its ingredient isn't part of the CURRENT mission's add-requirements -- e.g. the
         // Ice Cube slot used to add 6 cubes in Mission 1 has no business appearing in Mission 4,
@@ -566,10 +610,13 @@ namespace tmkoc.lunchforbuilders
         // actually-needed slots, a handful of decoy ingredients stay visible too (up to
         // minPantrySlotsVisible total) -- a shelf with only the exact right answers on it doesn't
         // ask the player to identify anything. A decoy that gets dragged in just bounces back like
-        // any other wrong drop; nothing extra needed for that part.
+        // any other wrong drop; nothing extra needed for that part. Decoys are picked so that no two
+        // shown ingredients -- required or decoy -- share the same base name (see
+        // GetIngredientBaseName), so nothing on the shelf looks like a duplicate of something else.
         private void UpdatePantryVisibility()
         {
             var decoys = new List<PantrySlot>();
+            var usedBaseNames = new HashSet<string>();
             int requiredCount = 0;
             foreach (var slot in pantrySlots)
             {
@@ -579,14 +626,28 @@ namespace tmkoc.lunchforbuilders
                     if (!req.isRemoval && req.ingredientId == slot.IngredientId) { usedThisMission = true; break; }
                 }
                 slot.gameObject.SetActive(usedThisMission);
-                if (usedThisMission) requiredCount++;
-                else decoys.Add(slot);
+                if (usedThisMission)
+                {
+                    requiredCount++;
+                    usedBaseNames.Add(GetIngredientBaseName(slot.IngredientId));
+                }
+                else
+                {
+                    decoys.Add(slot);
+                }
             }
 
             int decoysNeeded = Mathf.Max(0, minPantrySlotsVisible - requiredCount);
             ShuffleInPlace(decoys);
-            for (int i = 0; i < decoysNeeded && i < decoys.Count; i++)
-                decoys[i].gameObject.SetActive(true);
+            int decoysShown = 0;
+            foreach (var decoy in decoys)
+            {
+                if (decoysShown >= decoysNeeded) break;
+                string baseName = GetIngredientBaseName(decoy.IngredientId);
+                if (!usedBaseNames.Add(baseName)) continue; // same base as something already shown -- skip it
+                decoy.gameObject.SetActive(true);
+                decoysShown++;
+            }
         }
 
         private static void ShuffleInPlace(List<PantrySlot> list)
@@ -598,17 +659,14 @@ namespace tmkoc.lunchforbuilders
             }
         }
 
-        // Only meaningful for OrderAndCounting missions -- every other mission leaves every pantry
-        // slot interactable throughout (over-adding is allowed; it just bounces back, matching the
-        // GDD's "Too-many Ingredient bounce" / "Extra Ingredient Boing" feedback).
+        // Every slot on the shelf stays draggable, right ingredient or not -- an attempt with the
+        // wrong one (including something the recipe genuinely needs later, just not yet) bounces
+        // back as an incorrect drop exactly like any other wrong attempt, rather than being blocked
+        // from even being tried. FindActiveRequirement (sequenceOrder + currentCardIndex) is the sole
+        // authority on whether a drop actually succeeds; this no longer needs to pre-empt it visually.
         private void UpdatePantryInteractivity()
         {
-            bool isOrdered = currentMission.LearningRule == LearningRule.OrderAndCounting;
-            foreach (var slot in pantrySlots)
-            {
-                if (!isOrdered) { slot.SetInteractable(true); continue; }
-                slot.SetInteractable(FindActiveRequirement(slot.IngredientId) != null);
-            }
+            foreach (var slot in pantrySlots) slot.SetInteractable(true);
         }
 
         // "Removed so far" for a removal requirement, or "placed count" for an add one -- the one
@@ -735,16 +793,21 @@ namespace tmkoc.lunchforbuilders
         }
 
         // Drives the Recipe Card through its ingredients one at a time for every non-Memory mission:
-        // flip to the next card, play its intro VO and unlock the pantry for it (skipping the intro
+        // flip to the next card, unlock the pantry for it and play its intro VO (skipping the intro
         // entirely if the player already finished it earlier while a different card was showing),
         // wait for it to actually be completed, lock the pantry again, play its outro VO, repeat.
         // The very last card skips its own outro -- it would collide with AutoServe's own mission-
         // outro VO, which fires on the very same drop via RaiseProgress, on the same audio source.
-        private IEnumerator CardCycleRoutine()
+        // initialCardIntroDelay only applies to card 0 -- it's how long the mission intro VO
+        // ("Let's make a yummy Salad!") still has left to play, so card 0's own intro doesn't stomp
+        // it on the shared audio source. The pantry unlocks BEFORE that wait, not after, so dragging
+        // is never blocked just because a VO line is still going.
+        private IEnumerator CardCycleRoutine(float initialCardIntroDelay = 0f)
         {
             var requirements = currentMission.Requirements;
             for (int cardIndex = 0; cardIndex < requirements.Length; cardIndex++)
             {
+                currentCardIndex = cardIndex;
                 var req = requirements[cardIndex];
                 bool isLastCard = cardIndex == requirements.Length - 1;
 
@@ -756,15 +819,22 @@ namespace tmkoc.lunchforbuilders
 
                 if (GetRequirementCurrent(req) < req.requiredCount)
                 {
-                    gameManager.SoundManager?.PlayCardIntro(req.ingredientId);
                     UpdatePantryInteractivity();
                     RefreshTutorialHint();
+
+                    if (cardIndex == 0 && initialCardIntroDelay > 0f)
+                        yield return new WaitForSeconds(initialCardIntroDelay);
+                    gameManager.SoundManager?.PlayCardIntro(req.ingredientId);
 
                     yield return new WaitUntil(() => GetRequirementCurrent(req) >= req.requiredCount);
 
                     gameManager.TutorialManager?.CancelHint();
                     DisableAllPantrySlots();
                 }
+
+                // This ingredient's own list is now fully placed -- a small celebratory burst before
+                // moving on to the next one (or, on the last card, alongside AutoServe's own win beat).
+                ignredientCompletedEffect?.Play();
 
                 if (!isLastCard)
                 {

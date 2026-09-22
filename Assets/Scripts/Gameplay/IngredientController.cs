@@ -114,11 +114,21 @@ namespace tmkoc.lunchforbuilders
             if (iconImage != null) iconImage.sprite = icon;
         }
 
+        // Dims the whole token once it's resting inside a jug/glass (MissionRecipeData/
+        // CookingManager's PlacedAlphaForCurrentMission) -- a subtle "submerged in the liquid" cue.
+        // Driven through the CanvasGroup (the same one blocksRaycasts already uses) rather than the
+        // icon's own color, so it stays fully opaque for plate-based missions and while being dragged.
+        private void SetPlacedAlpha(float alpha)
+        {
+            if (canvasGroup == null) return;
+            canvasGroup.alpha = alpha;
+        }
+
         // Places this token directly at the drop point with no tween -- used for startingIngredients
         // seeded before the mission's first drop. Same stacked look as a successfully-dropped token
         // (same pile offset, shrunk scale), just without the fall animation, so the starting pile
         // reads consistently with ones added later.
-        public void PlaceInstantly(RectTransform dropPoint, int stackIndex, bool stackVertically = false, float scaleMultiplier = 1f)
+        public void PlaceInstantly(RectTransform dropPoint, int stackIndex, bool stackVertically = false, float scaleMultiplier = 1f, float placedAlpha = 1f)
         {
             Vector2 stackedOffset = StackedOffset(stackIndex, stackVertically);
             restParent = dropPoint;
@@ -126,6 +136,7 @@ namespace tmkoc.lunchforbuilders
             rectTransform.anchoredPosition = stackedOffset;
             rectTransform.localScale = Vector3.one * (stackedScale * scaleMultiplier);
             restAnchoredPos = stackedOffset;
+            SetPlacedAlpha(placedAlpha);
         }
 
         public void OnBeginDrag(PointerEventData eventData)
@@ -177,7 +188,7 @@ namespace tmkoc.lunchforbuilders
         // far, so several placed ingredients visibly stack up from the container's base instead of
         // either landing in one exact spot or scattering to a random point that can fall outside the
         // container's actual (non-rectangular) visible art.
-        public void SnapIntoStation(RectTransform dropPoint, int stackIndex, bool stackVertically = false, float scaleMultiplier = 1f)
+        public void SnapIntoStation(RectTransform dropPoint, int stackIndex, bool stackVertically = false, float scaleMultiplier = 1f, float placedAlpha = 1f)
         {
             isLocked = true;
             Vector2 anchorLocalPos = ToLocalAnchoredPos(dropPoint, dragLayer);
@@ -204,6 +215,7 @@ namespace tmkoc.lunchforbuilders
                 isLocked = false;
                 restParent = dropPoint;
                 restAnchoredPos = stackedOffset;
+                SetPlacedAlpha(placedAlpha);
                 // A small "landed!" settle, gentler than the rejection shake -- accepting a drop
                 // reads as a positive impact rather than a silent stop.
                 rectTransform.DOShakeAnchorPos(0.15f, strength: 8f, vibrato: 6);
